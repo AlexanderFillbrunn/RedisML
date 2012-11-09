@@ -1,0 +1,2 @@
+class MatrixOperationException(Exception):
+	pass
