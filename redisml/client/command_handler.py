@@ -8,7 +8,7 @@ def execute(r, cmd_str):
 		c = command_parser.parse_command(cmd)
 		
 		if not client_settings.COMMAND_MAPPING.has_key(c[0]):
-			raise Exception('Command is not registered')
+			raise Exception('Command ' + c[0] + ' is not registered')
 		
 		func = client_settings.COMMAND_MAPPING[c[0]]
 		

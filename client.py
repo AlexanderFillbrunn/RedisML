@@ -1,4 +1,5 @@
 from redisml.client.management.base import Client
+from redisml.client import client_settings
 import redis
 
 """
@@ -35,5 +36,6 @@ while not stop:
 					break
 """
 
+client_settings.initLogging()
 c = Client('localhost', 6379, 0)
 c.run()
