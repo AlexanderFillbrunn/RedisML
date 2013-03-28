@@ -1,6 +1,7 @@
 import redis
 import numpy
 import json
+import redisml.shared.matrix_serialization as ser
 
 class RedisWrapper:
 	def __init__(self, red):
