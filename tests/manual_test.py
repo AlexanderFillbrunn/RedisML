@@ -13,18 +13,18 @@ r.flushdb()
 fac = matrix.MatrixFactory(r, 2)
 
 m = numpy.matrix([[1, 1, 3, 3],
-				  [2, 2 ,4, 4],
-				  [2, 1 ,4, 5],
-				  [2, 1 ,4, 7]])
-				  
+                  [2, 2 ,4, 4],
+                  [2, 1 ,4, 5],
+                  [2, 1 ,4, 7]])
+                  
 n = numpy.matrix([[1, 1, 3, 3],
-				  [2, 2 ,4, 4],
-				  [2, 1 ,4, 5],
-				  [2, 1 ,4, 7]])
-				  
+                  [2, 2 ,4, 4],
+                  [2, 1 ,4, 5],
+                  [2, 1 ,4, 7]])
+                  
 mat1 = fac.matrix_from_numpy(m)
 mat2 = fac.matrix_from_numpy(n)
 res = mat1.cw_add(mat2)
 print res
 #except Exception as e:
-#	print str(e)
+#    print str(e)
