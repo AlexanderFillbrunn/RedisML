@@ -74,6 +74,8 @@ if format == 'ijv':
     transform_ijv(input, out_prefix, block_size, separator)
 elif format == 'mat':
     transform(input, out_prefix, block_size, separator)
+else:
+    print 'unknown format'
     
 '''
 Based on the comments by jorgeca, the loading and saving of the format is phased out in scipy's [Matrix Market](http://math.nist.gov/MatrixMarket/formats.html#coord).

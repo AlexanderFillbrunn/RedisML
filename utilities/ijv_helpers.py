@@ -1,3 +1,5 @@
+import numpy as np
+
 def to_ijv(a):
     rows, cols = a.shape
     ijv = np.empty((a.size,), dtype=[('i', np.intp),

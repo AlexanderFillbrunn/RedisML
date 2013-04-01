@@ -4,3 +4,7 @@ redisml/server/jobs/jobs copy.py
 utilities/test_matrix.csv
 
 convert_tabs.py
+
+utilities/genmat.py
+
+utilities/test.csv
