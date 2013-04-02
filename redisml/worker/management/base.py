@@ -1,14 +1,14 @@
 import redis
-from redisml.client import command_handler
+from redisml.worker import command_handler
 import json
 import logging
 
-class Client:
+class Worker:
     def __init__(self, host, port, db):
         self.redis = redis.Redis(host='localhost', port=6379, db=0)
         self.running = False
-        self.clientid = 'pyclient' + str(self.redis.incr('client_id'))
-        logging.debug('Client ID: ' + self.clientid)
+        self.workerid = 'pyclient' + str(self.redis.incr('client_id'))
+        logging.debug('Client ID: ' + self.workerid)
         
     def run(self):
         self.running = True
@@ -34,10 +34,10 @@ class Client:
                 #print "=================="
     
     def __fail(self, job_id, message):
-        self.redis.publish('c_results', json.dumps({'id' : job_id, 'success' : False, 'reason' : 'fail', 'message' : message, 'client' : self.clientid}))
+        self.redis.publish('c_results', json.dumps({'id' : job_id, 'success' : False, 'reason' : 'fail', 'message' : message, 'client' : self.workerid}))
         logging.error('Error in job ' + str(job_id) + ': ' + message)
         
     def __finish(self, job_id):
         self.redis.sadd('finished_jobs', job_id)
-        self.redis.publish('c_results', json.dumps({'id' : job_id, 'success' : True, 'client' : self.clientid}))
+        self.redis.publish('c_results', json.dumps({'id' : job_id, 'success' : True, 'client' : self.workerid}))
         logging.info('Finished job ' + str(job_id))

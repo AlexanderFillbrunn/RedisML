@@ -33,6 +33,7 @@ class Matrix:
         self.__rows = rows
         self.__cols = cols
         self.__name = name
+        self.__persist = False
         self.__redwrap = redwrap
         self.__block_size = block_size
         self.__initialized = initialized
@@ -42,11 +43,15 @@ class Matrix:
     
     def __del__(self):
         if self.__initialized:
-            try:
-                self.delete()
-            finally:
-                pass
-
+            if not self.__persist:
+                try:
+                    self.delete()
+                finally:
+                    pass
+                
+    def set_persistence(self, persist):
+        self.__persist = persist
+    
     BLOCK_NAME_FORMAT     = '{0}:{1}_{2}'
     INFO_FORMAT         = '{0}:info'
     MATRIX_NAME_FORMAT     = 'matrix{0}_{1}'

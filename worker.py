@@ -1,5 +1,5 @@
-from redisml.client.management.base import Client
-from redisml.client import client_settings
+from redisml.worker.management.base import Worker
+from redisml.worker import worker_settings
 import redis
 
 """
@@ -36,6 +36,6 @@ while not stop:
                     break
 """
 
-client_settings.initLogging()
-c = Client('localhost', 6379, 0)
+worker_settings.initLogging()
+c = Worker('localhost', 6379, 0)
 c.run()

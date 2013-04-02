@@ -31,3 +31,14 @@ class JobTimeoutExeption(Exception):
         
     def __repr__(self):
         return self.__str__()
+        
+class ConfigurationExeption(Exception):
+    def __init__(self, msg):
+        super(ConfigurationExeption, self).__init__(msg)
+        self.msg = msg
+        
+    def __str__(self):
+        return self.msg
+        
+    def __repr__(self):
+        return self.__str__()
