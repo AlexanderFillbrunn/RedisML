@@ -1,5 +1,6 @@
 from jobs import jobs
 from jobs import matrix_jobs
+from jobs import kmeans_jobs
 import redisml.server.command_builder as command_builder
 from redisml.server import redis_wrapper as rw
 from redisml.shared import command_names as cmdnames
@@ -422,22 +423,11 @@ class Matrix:
             raise BaseException('Dimensions of matrix and centers do not match')
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
-        parts = []
-        dist_job = jobs.Job(self.__redwrap.redis)
+        
         prefix = 'dist(' + self.__name + ',' + centers.name() + ')';
-        for row in range(0, self.row_blocks()):
-            name = prefix + '_' + str(row)
-            parts.append(name)
-            for col in range(0, self.col_blocks()):
-                dist_cmd = command_builder.CommandBuilder('DIST')
-                dist_cmd.add_param(self.block_name(row, col))
-                dist_cmd.add_param(centers.block_name(0, col))
-                dist_cmd.add_param(name)
-                dist_job.add_subjob(dist_cmd.getCmdString())
-        try:
-            dist_job.execute()
-        except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'DIST')    
+        dist_job = kmeans_jobs.KMeansDistanceJob(self.__redwrap.redis, self, centers, prefix)
+        
+        parts = dist_job.run()
         
         for p in range(0,len(parts)):
             part_name = parts[p]
@@ -467,22 +457,8 @@ class Matrix:
         prefix = 'center(' + self.__name + ',' + dist.name() + ')'
         cnt_prefix = 'counter(' + self.__name + ',' + dist.name() + ')_'
         
-        '''
-        recalc_job = jobs.Job(self.__redwrap.redis)
-        for row in range(0, self.row_blocks()):
-            recalc_cmd = command_builder.build_command('RECALC', self.block_name(row, 0), dist.block_name(row, 0), prefix + '_0_', cnt_prefix)
-            recalc_job.add_subjob(recalc_cmd)
-            for col in range(1, self.col_blocks()):
-                recalc_cmd = command_builder.build_command('RECALC', self.block_name(row, col), dist.block_name(row, 0), prefix + '_' + str(col) + '_')
-                recalc_job.add_subjob(recalc_cmd)
-        try:
-            recalc_job.execute()
-        except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'RECALC')    
-        '''
-        
-        recalc_job = KMeansRecalculationJob(self.__redwrap.redis, self, dist, prefix, cnt_prefix)
-        recalc_cob.run()
+        recalc_job = kmeans_jobs.KMeansRecalculationJob(self.__redwrap.redis, self, dist, prefix, cnt_prefix)
+        recalc_job.run()
         
         for col in range(0, self.col_blocks()):
             conc = None
