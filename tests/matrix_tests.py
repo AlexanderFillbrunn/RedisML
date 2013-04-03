@@ -142,28 +142,6 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.cw_add(mat2)
         result2 = m + n
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results on addition')
-'''
-    def testMatrixFactorization(self):
-        v = numpy.random.rand(1024,1024)
-        _v = matrix.Matrix.from_numpy(v, 256, self.rwrapper)
-        w = numpy.random.rand(1024,1024)
-        _w = matrix.Matrix.from_numpy(w, 256, self.rwrapper)
-        h = numpy.random.rand(1024,1024)
-        _h = matrix.Matrix.from_numpy(h, 256, self.rwrapper)
 
-        max_iteration = 10
-        for i in range(0, max_iteration):
-            h = h*(w.transpose().dot(h)/w.transpose().dot(w).dot(h))
-            w = w*(v.dot(h.transpose())/w.dot(h).dot(h.transpose()))
-            _h = _h.cw_multiply(_w.multiply(_h, transpose_self=True).cw_divide(_w.multiply(_w, transpose_self=True).multiply(_h)))
-            _w = _w.cw_multiply(_v.multiply(_h, transpose_m=True).cw_divide(_w.multiply(_h).multiply(_h, transpose_m=True)))
-            
-        numpy.testing.assert_array_almost_equal(_h.get_numpy_matrix(), h, err_msg='Numpy and RedisML produce different results')
-        numpy.testing.assert_array_almost_equal(_w.get_numpy_matrix(), w, err_msg='Numpy and RedisML produce different results')
-        
-        _h.delete()
-        _w.delete()
-        _v.delete()
-'''
 if __name__ == '__main__':
     unittest.main()
