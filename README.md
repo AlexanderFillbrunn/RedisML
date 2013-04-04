@@ -8,7 +8,7 @@ cell-wise operations, matrix-scalar operations, row and column sums, etc.
 
 General explanation
 -----------------------
-A matrix is splitted into blocks and then stored in the redis server. All operations on matrices that can be parallelized are called "jobs".
+A matrix is split into blocks and then stored in the redis server. All operations on matrices that can be parallelized are called "jobs".
 These jobs have subjobs that are pushed to the workers and each subjob works on a number of matrix blocks.
 
 Computers that want to participate in the calculations listen to new subjobs being pushed into a list in the key "free_jobs".
