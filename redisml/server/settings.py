@@ -1,4 +1,5 @@
 import logging, sys
+
 MAX_JOB_EXECUTIONS = 3
 DEFAULT_JOB_TIMEOUT = 0 # Timeout in seconds
 

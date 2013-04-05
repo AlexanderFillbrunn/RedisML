@@ -1,6 +1,5 @@
 from redisml.server.jobs import jobs
 import redisml.server.command_builder as command_builder
-import redisml.server
 
 class UnaryMatrixJob(jobs.Job):
     def __init__(self, redis, matrix):
@@ -25,19 +24,20 @@ class BinaryMatrixJob(jobs.Job):
 
 class MatrixScalarJob(jobs.Job):
     
-    def __init__(self, redis, matrix, scalar, op, result_name):
+    def __init__(self, redis, key_mngr, matrix, scalar, op, result_name):
         super(MatrixScalarJob, self).__init__(redis)
         self.matrix = matrix
         self.scalar = scalar
         self.operation = op
         self.result_name = result_name
+        self.key_mngr = key_mngr
         
     def run(self):
         for col in range(0, self.matrix.col_blocks()):
             for row in range(0,self.matrix.row_blocks()):
                 mult_cmd = command_builder.build_command('MS', str(self.scalar), self.operation,
                                                             self.matrix.block_name(row, col),
-                                                            redisml.server.matrix.Matrix.BLOCK_NAME_FORMAT.format(self.result_name, row, col))
+                                                            self.key_mngr.get_block_name(self.result_name, row, col))
                 self.add_subjob(mult_cmd)
         self.execute()
         
@@ -72,16 +72,17 @@ class CountJob(UnaryMatrixJob):
 
 class TransposeJob(UnaryMatrixJob):
     
-    def __init__(self, redis, matrix, result_name):
+    def __init__(self, redis, key_mngr, matrix, result_name):
         super(TransposeJob, self).__init__(redis, matrix)
         self.result_name = result_name
+        self.key_mngr = key_mngr
 
     def run(self):
         for col in range(0, self.matrix.col_blocks()):
             for row in range(0,self.matrix.row_blocks()):
                 transp_cmd = command_builder.build_command('MTRANS',
                                                             self.matrix.block_name(row, col),
-                                                            redisml.server.matrix.Matrix.BLOCK_NAME_FORMAT.format(self.result_name, col, row))
+                                                            self.key_mngr.get_block_name(self.result_name, col, row))
                 self.add_subjob(transp_cmd)
         self.execute()
 
@@ -90,13 +91,14 @@ class MultiplicationJob(BinaryMatrixJob):
         Job that does the first part of the matrix multiplication: Multiplicating blocks
         The second part is adding the intermediary results with a cell wise add
     """
-    def __init__(self, redis, matrix1, matrix2, transpose_m1, transpose_m2, negate_m1, negate_m2, result_name_format):
+    def __init__(self, redis, key_mngr, matrix1, matrix2, transpose_m1, transpose_m2, negate_m1, negate_m2, result_name_format):
         super(MultiplicationJob, self).__init__(redis, matrix1, matrix2)
         self.result_name_format = result_name_format
         self.transpose_m1 = transpose_m1
         self.transpose_m2 = transpose_m2
         self.negate_m1 = negate_m1
         self.negate_m2 = negate_m2
+        self.key_mngr = key_mngr
         
     def __build_modifier_string(self, bools, modifiers):
         if len(bools) != len(modifiers):
@@ -125,17 +127,18 @@ class MultiplicationJob(BinaryMatrixJob):
                     m1_block_name = self.matrix1.block_name(col, row) if self.transpose_m1 else self.matrix1.block_name(row, col)
                     m2_block_name = self.matrix2.block_name(col2, col) if self.transpose_m2 else self.matrix2.block_name(col, col2)
                     mult_cmd = command_builder.build_command('MMULT',     mod, m1_block_name, m2_block_name,
-                                                                        self.result_name_format.format(col, row, col2))
+                                                                        self.result_name_format.format(self.key_mngr.get_slave(col, row, col2), col, row, col2))
                     self.add_subjob(mult_cmd)
         self.execute()
 
 class MultiplicationMergeJob(jobs.Job):
-    def __init__(self, redis, rows, cols, input_name_format, result_name):
+    def __init__(self, redis, key_mngr, rows, cols, input_name_format, result_name):
         super(MultiplicationMergeJob, self).__init__(redis)
         self.rows = rows
         self.cols = cols
         self.input_name_format = input_name_format
         self.result_name = result_name
+        self.key_mngr = key_mngr
         
     def run(self):
         for col in range(0, self.cols):
@@ -143,28 +146,29 @@ class MultiplicationMergeJob(jobs.Job):
                 add_cb = command_builder.CommandBuilder('MADD')
                 del_cb = command_builder.CommandBuilder('DEL')
                 for col2 in range(0,self.rows):
-                    mname = self.input_name_format.format(col2, row, col)
+                    mname = self.input_name_format.format(self.key_mngr.get_slave(col2, row, col), col2, row, col)
                     add_cb.add_param(mname)
                     del_cb.add_param(mname)
                     
-                add_cb.add_param(redisml.server.matrix.Matrix.BLOCK_NAME_FORMAT.format(self.result_name, row, col))
+                add_cb.add_param(self.key_mngr.get_block_name(self.result_name, row, col))
                 self.add_subjob(add_cb.join(del_cb))
         self.execute()
 
 
 class CellwiseOperationJob(BinaryMatrixJob):
         
-    def __init__(self, redis, matrix1, matrix2, operation, result_name):
+    def __init__(self, redis, key_mngr, matrix1, matrix2, operation, result_name):
         super(CellwiseOperationJob, self).__init__(redis, matrix1, matrix2)
         self.operation = operation
         self.result_name = result_name
+        self.key_mngr = key_mngr
         
     def run(self):
         for col in range(0, self.matrix1.col_blocks()):
             for row in range(0, self.matrix1.row_blocks()):
                 cmd = command_builder.build_command("CW", self.operation, self.matrix1.block_name(row, col),
                                                                          self.matrix2.block_name(row, col),
-                                                                         redisml.server.matrix.Matrix.BLOCK_NAME_FORMAT.format(self.result_name, row, col))
+                                                                         self.key_mngr.get_block_name(self.result_name, row, col))
                 self.add_subjob(cmd)
         self.execute()
         

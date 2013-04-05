@@ -3,13 +3,15 @@ import redis
 import numpy
 import numpy.testing
 import redisml.server.matrix as matrix
+import redisml.server.server as server
+import redisml.server.configuration as config
 from redisml.server import redis_wrapper as rw
 
 class MatrixTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.redis = redis.Redis(host='localhost', port=6379, db=0)
-        self.rwrapper = rw.RedisWrapper(self.redis)
+        cfg = config.load_config('config.cfg')
+        self.server = server.Server(cfg)
 
     def tearDown(self):
         #self.redis.flushdb()
@@ -17,65 +19,65 @@ class MatrixTestCase(unittest.TestCase):
     
     def testTrace(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         res = mat1.trace()
         self.assertAlmostEqual(res, m.trace())
         
     def testScalarMult(self):
         m = numpy.arange(12).reshape(3,4)
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         result = mat1.scalar_multiply(5)
         res = 5 * m
         numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on scalar multiplication')
 
     def testTranspose(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         res = mat1.transpose()
         
         numpy.testing.assert_array_almost_equal(res.get_numpy_matrix(), m.T, err_msg='Numpy and RedisML produce different results on transpose')
 
     def testColSums(self):
         m = numpy.arange(12).reshape(3,4)
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums()
         res = m.sum(axis=0)
         numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[0,:], err_msg='Numpy and RedisML produce different results on colsums')
     
     def testSpecialColSums(self):
         m = numpy.arange(9).reshape(3,3)
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums(expr='x+1')
         res = m.sum(axis=0) + 3
         numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[0,:], err_msg='Numpy and RedisML produce different results on colsums')
     
     def testRowSums(self):
         m = numpy.arange(12).reshape(3,4)
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         result = mat1.row_sums()
         res = m.sum(axis=1)
         numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[:,0], err_msg='Numpy and RedisML produce different results on colsums')
 
     def testCellAccess(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         self.assertEqual(mat1.get_cell_value(500,500), m[500,500])
 
     def testSimpleMatrixCreation(self):
         m = numpy.matrix([[1,2,3],[4,5,6],[7,8,9]])
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         numpy.testing.assert_array_equal(m, mat1.get_numpy_matrix())
         
     def testMatrixCreation(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         numpy.testing.assert_array_equal(m, mat1.get_numpy_matrix())
     
     def testTransposeNegateMultiply(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
-        mat2 = matrix.Matrix.from_numpy(n, 256, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         
         result1 = mat1.multiply(mat2, transpose_self=True, negate_m=True)
         result2 = m.transpose().dot(-n)
@@ -86,9 +88,9 @@ class MatrixTestCase(unittest.TestCase):
         
     def testNegateTransposeMultiply(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
-        mat2 = matrix.Matrix.from_numpy(n, 256, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         
         result1 = mat1.multiply(mat2, transpose_m=True, negate_self=True)
         result2 = (-m).dot(n.transpose())
@@ -98,9 +100,9 @@ class MatrixTestCase(unittest.TestCase):
         
     def testFullModifierMultiply(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
-        mat2 = matrix.Matrix.from_numpy(n, 256, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         
         result1 = mat1.multiply(mat2, transpose_m=True, negate_self=True, transpose_self=True, negate_m=True)
         result2 = (-m).transpose().dot((-n).transpose())
@@ -110,9 +112,9 @@ class MatrixTestCase(unittest.TestCase):
     
     def testSimpleMultiply(self):
         m = numpy.matrix([[1,2,3],[4,5,6],[7,8,9]])
-        mat1 = matrix.Matrix.from_numpy(m, 2, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.matrix([[11,12,13],[14,15,16],[17,18,19]])
-        mat2 = matrix.Matrix.from_numpy(n, 2, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         
         result1 = mat1.multiply(mat2)
         result2 = m.dot(n)
@@ -122,9 +124,9 @@ class MatrixTestCase(unittest.TestCase):
 
     def testMultiply(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
-        mat2 = matrix.Matrix.from_numpy(n, 256, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         
         result1 = mat1.multiply(mat2)
         result2 = m.dot(n)
@@ -136,12 +138,12 @@ class MatrixTestCase(unittest.TestCase):
         
     def testAdd(self):
         m = numpy.random.rand(1024,1024)
-        mat1 = matrix.Matrix.from_numpy(m, 256, self.rwrapper)
+        mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
-        mat2 = matrix.Matrix.from_numpy(n, 256, self.rwrapper)
+        mat2 = self.server.matrix_from_numpy(n)
         result1 = mat1.cw_add(mat2)
         result2 = m + n
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results on addition')
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

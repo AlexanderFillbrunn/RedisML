@@ -8,6 +8,8 @@ def load_config(cfg_file):
                     
 def clean_config(cfg, host='localhost', port=6379, db=0, block_size=1024):
     # Redis stuff
+    if not cfg.has_key('server_name'):
+        raise exceptions.ConfigurationExeption('The configuration does not have a server name')
     if not cfg.has_key('redis'):
         cfg['redis'] = {}
     redis_cfg = cfg['redis']

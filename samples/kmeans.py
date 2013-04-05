@@ -2,6 +2,13 @@ import numpy
 import redisml.server.server as server
 import redisml.server.configuration as config
 
+def kmeans(data, centers, k):
+    # iterate k-means
+    for i in range(0, k):
+        dist = data.k_means_distance(centers)
+        centers = data.k_means_recalc(dist)
+
+
 # Create a server
 cfg = config.load_config('config.cfg')
 s = server.Server(cfg)
@@ -15,9 +22,6 @@ centers_ = data_[0:10,:]
 data = s.matrix_from_numpy(data_)
 centers = s.matrix_from_numpy(centers_)
 
-# iterate k-means
-for i in range(0, 10):
-    dist = data.k_means_distance(centers)
-    centers = data.k_means_recalc(dist)
+kmeans(data, centers, 10)
     
 print centers

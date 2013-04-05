@@ -1,30 +1,14 @@
-import redis
 import numpy
-import numpy.testing
-from math import *
-from redisml.server.jobs import jobs
-import redisml.server.matrix as matrix
-from redisml.server import redis_wrapper as rw
+import redisml.server.server as server
+import redisml.server.configuration as config
 
-#try:
-r = redis.Redis(host='localhost', port=6379, db=0)
-r.flushdb()
+cfg = config.load_config('config.cfg')
+cfg['matrix']['block_size'] = 2
+s = server.Server(cfg)
 
-fac = matrix.MatrixFactory(r, 2)
 
-m = numpy.matrix([[1, 1, 3, 3],
-                  [2, 2 ,4, 4],
-                  [2, 1 ,4, 5],
-                  [2, 1 ,4, 7]])
-                  
-n = numpy.matrix([[1, 1, 3, 3],
-                  [2, 2 ,4, 4],
-                  [2, 1 ,4, 5],
-                  [2, 1 ,4, 7]])
-                  
-mat1 = fac.matrix_from_numpy(m)
-mat2 = fac.matrix_from_numpy(n)
-res = mat1.cw_add(mat2)
-print res
-#except Exception as e:
-#    print str(e)
+m = numpy.arange(12).reshape(3,4)
+mat1 = s.matrix_from_numpy(m)
+result = mat1.col_sums()
+res = m.sum(axis=0)
+numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')

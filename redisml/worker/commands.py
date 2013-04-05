@@ -2,7 +2,24 @@ import numpy
 import time
 import math
 import logging
+import json
 import pickle
+from redis import Redis
+from redisml.shared import redis_constants as const
+from redisml.shared.redis_wrapper import RedisWrapper
+
+def _get_redis_slave(redis_master, name):
+    slave_info = json.loads(redis_master.get('slave:' + name))
+    slave = Redis(slave_info['host'], slave_info['port'], slave_info['db'])
+    return slave
+
+def _get_matrix_block(redis_master, block_name):
+    slave_name = block_name.split(":")[1]
+    return numpy.loads(_get_redis_slave(redis_master, slave_name).get(block_name))
+    
+def _save_matrix_block(redis_master, block_name, data):
+    slave = _get_redis_slave(redis_master, const.get_slave_name(block_name))
+    slave.set(block_name, data.dumps())
 
 def fail(r, cmdArgs):
     raise Exception('Fail test')
@@ -11,9 +28,9 @@ def timeout(r, cmdArgs):
     time.sleep(int(cmdArgs[0]))
 
 def mtrans(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
+    m = _get_matrix_block(r, cmdArgs[0])
     res = m.transpose()
-    r.set(cmdArgs[1], res.dumps())
+    _save_matrix_block(r, cmdArgs[1], res)
 
 def mmult(r, cmdArgs):
     if len(cmdArgs) < 4:
@@ -21,11 +38,11 @@ def mmult(r, cmdArgs):
     
     modifiers = cmdArgs[0].split(";")
     
-    m1 = numpy.loads(r.get(cmdArgs[1]))
+    m1 = _get_matrix_block(r, cmdArgs[1])
     if cmdArgs[1] == cmdArgs[2]:
         m2 = m1
     else:
-        m2 = numpy.loads(r.get(cmdArgs[2]))
+        m2 = _get_matrix_block(r, cmdArgs[2])
     
     if modifiers[0][0] != "n":
         for m in modifiers[0]:
@@ -41,21 +58,23 @@ def mmult(r, cmdArgs):
                 m2 = m2.transpose()
     
     m3 = m1.dot(m2)
-    r.set(cmdArgs[3], m3.dumps())
+    _save_matrix_block(r, cmdArgs[3], m3)
 
 def madd(r, cmdArgs):
-    if len(cmdArgs) < 3:
+    if len(cmdArgs) < 1:
         raise Exception('Too few arguments')
-    m = numpy.loads(r.get(cmdArgs[0]))
-    for i in cmdArgs[1:len(cmdArgs)-1]:
-        m += numpy.loads(r.get(i))
+    m = _get_matrix_block(r, cmdArgs[0])
+    
+    if len(cmdArgs) > 2:
+        for i in cmdArgs[1:len(cmdArgs)-1]:
+            m += _get_matrix_block(r, i)
 
-    r.set(cmdArgs[len(cmdArgs)-1], m.dumps())
+    _save_matrix_block(r, cmdArgs[len(cmdArgs)-1], m)
     
 def ms(r, cmdArgs):
     scalar = float(cmdArgs[0])
     op = cmdArgs[1]
-    matrix = numpy.loads(r.get(cmdArgs[2]))
+    matrix = _get_matrix_block(r, cmdArgs[2])
     
     if op == "*":
         result = matrix * scalar
@@ -66,56 +85,55 @@ def ms(r, cmdArgs):
     elif op == "-":
         result = matrix - scalar
         
-    r.set(cmdArgs[3], result.dumps())
-
+    _save_matrix_block(r, cmdArgs[3], result)
 
 def colsum(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
-    
+    m = _get_matrix_block(r, cmdArgs[0])
     #if cmdArgs[1] == 'x':
-    #    r.set(cmdArgs[2], m.sum(axis=0).dumps())
+    #    _save_matrix_block(r, cmdArgs[2], m.sum(axis=0))
     #else:
     code = compile(cmdArgs[1], '', 'eval')
-    res = numpy.empty([1, m.shape[1]])
+    res = numpy.empty([2, m.shape[1]])
     for i in range(0, m.shape[1]):
         s = 0
         for x in m[:,i]:
             s += eval(code)
-        res[0,i] = s
-    r.set(cmdArgs[2], res.dumps())
+            res[0,i] = s
+    _save_matrix_block(r, cmdArgs[2], res)
     
 def rowsum(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
+    m = _get_matrix_block(r, cmdArgs[0])
     #if cmdArgs[1] == 'x':
-    #    r.set(cmdArgs[2], m.sum(axis=1).dumps())
+    #    _save_matrix_block(r, cmdArgs[2], m.sum(axis=1))
     #else:
     code = compile(cmdArgs[1], '', 'eval')
-    res = numpy.empty([m.shape[0], 1])
+    res = numpy.empty([m.shape[0], 2])
     for i in range(0, m.shape[0]):
         s = 0
         for x in m[i,:]:
             s += eval(code)
         res[i,0] = s
-    r.set(cmdArgs[2], res.dumps())
+    _save_matrix_block(r, cmdArgs[2], res)
 
 def mtrace(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
+    m = _get_matrix_block(r, cmdArgs[0])
     r.rpush(cmdArgs[1], numpy.trace(m))
 
 def mrand(r, cmdArgs):
     pass
 
 def delete(r, cmdArgs):
+    redwrap = RedisWrapper(r)
     for m in cmdArgs:
-        r.delete(m)
+        redwrap.delete_block(m)
 
 def equal(r, cmdArgs):
     key = cmdArgs[2]
     # Same block in redis means we do not have to compare
     if cmdArgs[0] == cmdArgs[1]:
         r.rpush(key, 1)
-    m = numpy.loads(r.get(cmdArgs[0]))
-    n = numpy.loads(r.get(cmdArgs[1]))
+    m = _get_matrix_block(r, cmdArgs[0])
+    n = _get_matrix_block(r, cmdArgs[1])
     if len(cmdArgs) > 3:
         eps = float(cmdArgs[2])
     else:
@@ -128,8 +146,8 @@ def equal(r, cmdArgs):
         r.rpush(key, 1)
         
 def k_means_distance(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
-    v = numpy.loads(r.get(cmdArgs[1]))
+    m = _get_matrix_block(r, cmdArgs[0])
+    v = _get_matrix_block(r, cmdArgs[1])
     key = cmdArgs[len(cmdArgs)-1]
     num_v = len(v)
     num_r = len(m)
@@ -148,11 +166,11 @@ def k_means_distance(r, cmdArgs):
 
 def cw(r, cmdArgs):
     op = cmdArgs[0]
-    m = numpy.loads(r.get(cmdArgs[1]))
+    m = _get_matrix_block(r, cmdArgs[1])
     if cmdArgs[1] == cmdArgs[2]:
         n = m
     else:
-        n = numpy.loads(r.get(cmdArgs[2]))
+        n = _get_matrix_block(r, cmdArgs[2])
     if op == "+":
         res = m+n
     elif op == "-":
@@ -163,10 +181,10 @@ def cw(r, cmdArgs):
         res = m*n
     else:
         raise Exception('Unknown operator ' + op)
-    r.set(cmdArgs[3], res.dumps())
+    _save_matrix_block(r, cmdArgs[3], res)
 
 def count(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
+    m = _get_matrix_block(r, cmdArgs[0])
     key = cmdArgs[1]
     pipe = r.pipeline()
     for i in range(0, m.shape[1]):
@@ -178,8 +196,8 @@ def count(r, cmdArgs):
     pipe.execute()
     
 def k_means_recalc(r, cmdArgs):
-    m = numpy.loads(r.get(cmdArgs[0]))
-    d = numpy.loads(r.get(cmdArgs[1]))
+    m = _get_matrix_block(r, cmdArgs[0])
+    d = _get_matrix_block(r, cmdArgs[1])
     result_prefix = cmdArgs[2]
     #Only count if prefix is given
     counter_prefix = None
