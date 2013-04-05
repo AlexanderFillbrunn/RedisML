@@ -8,17 +8,10 @@ cell-wise operations, matrix-scalar operations, row and column sums, etc.
 
 General explanation
 -----------------------
-<<<<<<< HEAD
-<<<<<<< HEAD
 A matrix is split into blocks and then stored in the redis server. All operations on matrices that can be parallelized are called "jobs".
 These jobs have subjobs that are pushed to the workers and instructs them to execute a certain operation on one or more blocks.
-=======
-A matrix is splitted into blocks and then stored on several redis instances called "slaves". There is also a master redis instance which is used for storing management information. The master can at the same time be a slave, which means it also stores matrix blocks.
-=======
 A matrix is split into blocks and then stored on several redis instances called "slaves". There is also a master redis instance which is used for storing management information. The master can at the same time be a slave, which means it also stores matrix blocks.
->>>>>>> Update README.md
 All operations on matrices that can be parallelized are called "jobs". These jobs have subjobs that are pushed to the workers and each subjob works on a number of matrix blocks.
->>>>>>> Explanation of the configuration
 
 Workers that want to participate in the calculations listen to new subjobs being pushed into a list in the key "free_jobs" on the master redis instance.
 Once a new subjob is added, the first worker to retrieve it gets the complete job information from a key that can be computed from the job id in the list.
