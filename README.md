@@ -9,10 +9,14 @@ cell-wise operations, matrix-scalar operations, row and column sums, etc.
 General explanation
 -----------------------
 <<<<<<< HEAD
+<<<<<<< HEAD
 A matrix is split into blocks and then stored in the redis server. All operations on matrices that can be parallelized are called "jobs".
 These jobs have subjobs that are pushed to the workers and instructs them to execute a certain operation on one or more blocks.
 =======
 A matrix is splitted into blocks and then stored on several redis instances called "slaves". There is also a master redis instance which is used for storing management information. The master can at the same time be a slave, which means it also stores matrix blocks.
+=======
+A matrix is split into blocks and then stored on several redis instances called "slaves". There is also a master redis instance which is used for storing management information. The master can at the same time be a slave, which means it also stores matrix blocks.
+>>>>>>> Update README.md
 All operations on matrices that can be parallelized are called "jobs". These jobs have subjobs that are pushed to the workers and each subjob works on a number of matrix blocks.
 >>>>>>> Explanation of the configuration
 
@@ -57,9 +61,11 @@ The server is configured using a file in json format. It can look as follows:
 </pre>
 </code>
 
-The server name is currently not used but will be later to distinguish several redisml servers that use the same redis instance as a master.
-The matrix dictionary contains information about the matrices that are created with this server. Currently this is only the block size.
-"redis_master" contains information about which redis instance is used as a redis master. This is where all the management information about jobs and matrices is stored.
-"redis_slaves" contains all redis instances that are used for storing matrix blocks. In this example blocks are distributed over 2 databases on the same redis instance.
+Currently the configuration consists of four parts:
+* The server name is currently not used but will be later to distinguish several redisml servers that use the same redis instance as a master.
+* The matrix dictionary contains information about the matrices that are created with this server. Currently this is only the block size.
+* "redis_master" contains information about which redis instance is used as a redis master. This is where all the management information about jobs and matrices is stored.
+* "redis_slaves" contains all redis instances that are used for storing matrix blocks. In this example blocks are distributed over 2 databases on the same redis instance.
+
 
 Client configuration will come soon.
