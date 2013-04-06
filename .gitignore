@@ -8,3 +8,5 @@ convert_tabs.py
 utilities/genmat.py
 
 utilities/test.csv
+
+delete_pyc.py
