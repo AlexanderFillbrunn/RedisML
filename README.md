@@ -25,7 +25,7 @@ This assumes you are running the server and all workers on localhost. This is th
 
 1. Download redis from http://redis.io/download
 2. Add the RedisML project to your PYTHONPATH variable or the redisml directory into your Python lib folder
-3. Run the client script with python worker.py
+3. Run the client script with the command "python worker.py sample_server"
 4. Go to tests and run python matrix_tests.py
 
 Configuration
@@ -55,10 +55,7 @@ The server is configured using a file in json format. It can look as follows:
 </code>
 
 Currently the configuration consists of four parts:
-* The server name is currently not used but will be later to distinguish several redisml servers that use the same redis instance as a master.
+* The server name is used to distinguish several redisml servers that use the same redis instance as a master.
 * The matrix dictionary contains information about the matrices that are created with this server. Currently this is only the block size.
 * "redis_master" contains information about which redis instance is used as a redis master. This is where all the management information about jobs and matrices is stored.
 * "redis_slaves" contains all redis instances that are used for storing matrix blocks. In this example blocks are distributed over 2 databases on the same redis instance.
-
-
-Client configuration will come soon.
