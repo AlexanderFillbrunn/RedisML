@@ -10,7 +10,6 @@ from redisml.shared.redis_wrapper import RedisWrapper
 
 def _get_redis_slave(cmd_ctx, name):
     key = const.SLAVE_KEY.format(cmd_ctx.key_manager.server_name, name)
-    print key
     slave_info = json.loads(cmd_ctx.redis_master.get(key))
     slave = Redis(slave_info['host'], slave_info['port'], slave_info['db'])
     return slave
