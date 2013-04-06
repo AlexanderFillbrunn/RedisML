@@ -6,16 +6,17 @@ import redisml.shared.redis_constants as const
 
 class RedisWrapper:
 
-    def __init__(self, red):
+    def __init__(self, red, key_mngr):
         self.redis = red
         self.slaves = {}
+        self.key_mngr = key_mngr
     
     def get_slave_redis(self, slave_name):
         slave_redis = None
         if self.slaves.has_key(slave_name):
             slave_redis = self.slaves[slave_name]
         else:
-            slave_info = json.loads(self.redis.get('slave:' + slave_name))
+            slave_info = json.loads(self.redis.get(const.SLAVE_KEY.format(self.key_mngr.server_name, slave_name)))
             slave_redis = Redis(slave_info['host'], port=slave_info['port'], db=slave_info['db'])
             self.slaves[slave_name] = slave_redis
         return slave_redis

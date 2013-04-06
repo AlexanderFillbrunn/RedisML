@@ -58,7 +58,7 @@ class Matrix:
         self.__persist = persist
     
     def delete(self):
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         for block in self.block_names():
             redwrap.delete_block(block)
         self.__redis.delete(const.INFO_FORMAT.format(self.__name))
@@ -86,7 +86,7 @@ class Matrix:
         cols = mat.shape[1]
 
 
-        redwrap = RedisWrapper(redis)
+        redwrap = RedisWrapper(redis, key_mngr)
 
         m = Matrix(rows, cols, name, block_size, redis, key_mngr, True)
         # Separate blocks and send them to the redis server
@@ -180,7 +180,7 @@ class Matrix:
         """
             Prints each block
         """
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         for row in range(0, self.row_blocks()):
             for col in range(0, self.col_blocks()):
                 n = redwrap.get_block(self.block_name(row, col))
@@ -192,7 +192,7 @@ class Matrix:
         """
             Returns the value of a single matrix cell
         """
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         block_row = int(math.floor(row / self.__block_size))
         block_col = int(math.floor(col / self.__block_size))
         offset_row = row % self.__block_size
@@ -204,7 +204,7 @@ class Matrix:
         """
             Returns a block as numpy matrix
         """
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         return redwrap.get_block(self.block_name(row, col))
         
     def get_numpy_matrix(self):
@@ -212,7 +212,7 @@ class Matrix:
             Concatenates all blocks of this matrix and returns one big numpy matrix
         """
         m = None
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         for row in range(0,self.row_blocks()):
             b = redwrap.get_block(self.block_name(row, 0))
             #print self.block_name(row, 0)
@@ -323,8 +323,8 @@ class Matrix:
         """
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
-        colsum_job = jobs.Job(self.__redis)
-        add_job = jobs.Job(self.__redis)
+        colsum_job = jobs.Job(self.__redis, self.__key_mngr)
+        add_job = jobs.Job(self.__redis, self.__key_mngr)
         prefix = 'colsum(' + self.__name + ')'
         
         # First sum up each block
@@ -366,8 +366,8 @@ class Matrix:
         """
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
-        rowsum_job = jobs.Job(self.__redis)
-        add_job = jobs.Job(self.__redis)
+        rowsum_job = jobs.Job(self.__redis, self.__key_mngr)
+        add_job = jobs.Job(self.__redis, self.__key_mngr)
         prefix = 'rowsum(' + self.__name + ')'
         
         # First sum up each block
@@ -408,7 +408,7 @@ class Matrix:
             raise exceptions.MatrixOperationException('Can only compute trace of a square matrix')
 
         output_key = 'mtrace(' + self.name() + ')'
-        trace_job = matrix_jobs.TraceJob(self.__redis, self, output_key)
+        trace_job = matrix_jobs.TraceJob(self.__redis, self.__key_mngr, self, output_key)
         trace_job.run()
         
         results = self.__redis.lrange(output_key, 0, -1)
@@ -427,9 +427,9 @@ class Matrix:
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
         
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         prefix = 'dist(' + self.__name + ',' + centers.name() + ')';
-        dist_job = kmeans_jobs.KMeansDistanceJob(self.__redis, self, centers, prefix)
+        dist_job = kmeans_jobs.KMeansDistanceJob(self.__redis, self.__key_mngr, self, centers, prefix)
         
         parts = dist_job.run()
         
@@ -457,12 +457,12 @@ class Matrix:
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
         
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         num_centers = dist.dimension()[1]
         prefix = 'center(' + self.__name + ',' + dist.name() + ')'
         cnt_prefix = 'counter(' + self.__name + ',' + dist.name() + ')_'
         
-        recalc_job = kmeans_jobs.KMeansRecalculationJob(self.__redis, self, dist, prefix, cnt_prefix)
+        recalc_job = kmeans_jobs.KMeansRecalculationJob(self.__redis, self.__key_mngr, self, dist, prefix, cnt_prefix)
         recalc_job.run()
         
         for col in range(0, self.col_blocks()):
@@ -499,7 +499,7 @@ class Matrix:
         if self.dimension() != m.dimension():
             return False
 
-        equals_job = matrix_jobs.EqualJob(self.__redis, self, m)
+        equals_job = matrix_jobs.EqualJob(self.__redis, self.__key_mngr, self, m)
         equals_job.run()
         
         pipe = self.__redis.pipeline()
@@ -516,7 +516,7 @@ class Matrix:
             For each occurring value per column this method counts the number of occurrences
         """
         prefix = 'count(' + self.name() + ')_'
-        count_job = matrix_jobs.CountJob(self.__redis, self, prefix)
+        count_job = matrix_jobs.CountJob(self.__redis, self.__key_mngr, self, prefix)
         count_job.run()
         
         output = []
@@ -552,7 +552,7 @@ class Matrix:
         """
             Returns a scalar if the matrix consists of only one cell
         """
-        redwrap = RedisWrapper(self.__redis)
+        redwrap = RedisWrapper(self.__redis, self.__key_mngr)
         if self.dimension()[0] != 1 or self.dimension()[1] != 1:
             raise exceptions.MatrixOperationException('Cannot convert a matrix with more than one column and row to a scalar', 'MATRIX2SCALAR')
         return redwrap.get_block(self.block_name(0,0))[0,0]

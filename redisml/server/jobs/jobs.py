@@ -4,7 +4,7 @@ from redisml.server import settings, exceptions
 from redisml.shared import events
 
 class Subjob(object):
-    def __init__(self, id, cmd, redis):
+    def __init__(self, id, cmd, redis, free_jobs_key):
         self.id = id
         self.cmd = cmd
         self.redis = redis
@@ -13,6 +13,7 @@ class Subjob(object):
         self.timer = None
         self.timeout = settings.DEFAULT_JOB_TIMEOUT
         self.timeoutOccurred = events.EventHook()
+        self.free_jobs_key = free_jobs_key
 
     def getFullID(self):
         return str(self.currentParent) + '.' + str(self.id)
@@ -42,7 +43,7 @@ class Subjob(object):
         # Add job to redis
         job = json.dumps({'id' : self.getFullID(), 'cmd' : self.cmd})
         self.redis.set(self.getRedisKey(), job)
-        self.redis.rpush('free_jobs', self.getFullID())
+        self.redis.rpush(self.free_jobs_key, self.getFullID())
         self.running = True
         if self.timeout > 0:
             self.timer = threading.Timer(self.timeout, self.__timeout)
@@ -56,13 +57,17 @@ class Subjob(object):
         self.timer = None
     
 class Job(object):
-    def __init__(self, redis):
+    def __init__(self, redis, key_mngr):
         self.redis = redis
         self.subjobs = []
         self.subjobTimeout = settings.DEFAULT_JOB_TIMEOUT
+        # Get keys
+        self.results_channel_name = key_mngr.get_results_channel_name()
+        self.free_jobs_key = key_mngr.get_free_jobs_key()
+        self.job_ids_key = key_mngr.get_job_ids_key()
 
     def add_subjob(self, command):
-        s = Subjob(len(self.subjobs), command, self.redis)
+        s = Subjob(len(self.subjobs), command, self.redis, self.free_jobs_key)
         s.setTimeout(self.subjobTimeout)
         s.timeoutOccurred += self.subjobTimeoutOccurred
         self.subjobs.append(s)
@@ -78,15 +83,15 @@ class Job(object):
         return logger
     
     def subjobTimeoutOccurred(self, sender):
-        self.redis.publish('c_results', json.dumps({'id' : sender.getFullID(), 'success' : False, 'reason' : 'timeout', 'message' : 'Timeout after ' + str(sender.timeout) + ' seconds' }))
+        self.redis.publish(self.results_channel_name, json.dumps({'id' : sender.getFullID(), 'success' : False, 'reason' : 'timeout', 'message' : 'Timeout after ' + str(sender.timeout) + ' seconds' }))
     
     def execute(self):
         # For each execution a new job id is assigned so a job can safely be executed multiple times
-        jobid = self.redis.incr('job_ids')
+        jobid = self.redis.incr(self.job_ids_key)
         logger = self.__getLogger(jobid)
         # Register pubsub for listening for job results
         pubsub = self.redis.pubsub()
-        pubsub.subscribe('c_results')
+        pubsub.subscribe(self.results_channel_name)
         
         self.returned_jobs = Set()
         self.jobcount = []

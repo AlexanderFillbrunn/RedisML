@@ -5,7 +5,6 @@ import numpy.testing
 import redisml.server.matrix as matrix
 import redisml.server.server as server
 import redisml.server.configuration as config
-from redisml.server import redis_wrapper as rw
 
 class MatrixTestCase(unittest.TestCase):
     

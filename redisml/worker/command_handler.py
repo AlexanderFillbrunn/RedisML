@@ -1,7 +1,9 @@
 import command_parser
 import worker_settings
+from command_context import CommandContext
+from redisml.shared.keymanager import KeyManager
 
-def execute(redis_master, cmd_str):
+def execute(redis_master, server_name, slaves, cmd_str):
     cmds = cmd_str.split('\n')
     for cmd in cmds:
         # get command name and parameters
@@ -19,4 +21,5 @@ def execute(redis_master, cmd_str):
             mod = getattr(mod, func_parts[i])
         
         f = getattr(mod, func_parts[len(func_parts)-1])
-        f(redis_master, c[1:])
+        f(CommandContext(redis_master, KeyManager(slaves, server_name), c[1:]))
+        # f(redis_master, c[1:])

@@ -2,8 +2,8 @@ from redisml.server.jobs import jobs
 import redisml.server.command_builder as command_builder
 
 class UnaryMatrixJob(jobs.Job):
-    def __init__(self, redis, matrix):
-        super(UnaryMatrixJob, self).__init__(redis)
+    def __init__(self, redis, key_mngr, matrix):
+        super(UnaryMatrixJob, self).__init__(redis, key_mngr)
         self.matrix = matrix
 
     def setMatrix(matrix):
@@ -11,8 +11,8 @@ class UnaryMatrixJob(jobs.Job):
         
 class BinaryMatrixJob(jobs.Job):
     
-    def __init__(self, redis, matrix1, matrix2):
-        super(BinaryMatrixJob, self).__init__(redis)
+    def __init__(self, redis, key_mngr, matrix1, matrix2):
+        super(BinaryMatrixJob, self).__init__(redis, key_mngr)
         self.matrix1 = matrix1
         self.matrix2 = matrix2
 
@@ -25,7 +25,7 @@ class BinaryMatrixJob(jobs.Job):
 class MatrixScalarJob(jobs.Job):
     
     def __init__(self, redis, key_mngr, matrix, scalar, op, result_name):
-        super(MatrixScalarJob, self).__init__(redis)
+        super(MatrixScalarJob, self).__init__(redis, key_mngr)
         self.matrix = matrix
         self.scalar = scalar
         self.operation = op
@@ -43,8 +43,8 @@ class MatrixScalarJob(jobs.Job):
         
 class TraceJob(UnaryMatrixJob):
 
-    def __init__(self, redis, matrix, output_key):
-        super(TraceJob, self).__init__(redis, matrix)
+    def __init__(self, redis,key_mngr,  matrix, output_key):
+        super(TraceJob, self).__init__(redis, key_mngr, matrix)
         self.output_key = output_key
         
     def run(self):
@@ -55,8 +55,8 @@ class TraceJob(UnaryMatrixJob):
         
 class CountJob(UnaryMatrixJob):
     
-    def __init__(self, redis, matrix, output_prefix):
-        super(CountJob, self).__init__(redis, matrix)
+    def __init__(self, redis, key_mngr, matrix, output_prefix):
+        super(CountJob, self).__init__(redis, key_mngr, matrix)
         self.output_prefix = output_prefix
         
     def SetOutputPrefix(self, output_prefix):
@@ -73,7 +73,7 @@ class CountJob(UnaryMatrixJob):
 class TransposeJob(UnaryMatrixJob):
     
     def __init__(self, redis, key_mngr, matrix, result_name):
-        super(TransposeJob, self).__init__(redis, matrix)
+        super(TransposeJob, self).__init__(redis, key_mngr, matrix)
         self.result_name = result_name
         self.key_mngr = key_mngr
 
@@ -92,7 +92,7 @@ class MultiplicationJob(BinaryMatrixJob):
         The second part is adding the intermediary results with a cell wise add
     """
     def __init__(self, redis, key_mngr, matrix1, matrix2, transpose_m1, transpose_m2, negate_m1, negate_m2, result_name_format):
-        super(MultiplicationJob, self).__init__(redis, matrix1, matrix2)
+        super(MultiplicationJob, self).__init__(redis, key_mngr, matrix1, matrix2)
         self.result_name_format = result_name_format
         self.transpose_m1 = transpose_m1
         self.transpose_m2 = transpose_m2
@@ -133,7 +133,7 @@ class MultiplicationJob(BinaryMatrixJob):
 
 class MultiplicationMergeJob(jobs.Job):
     def __init__(self, redis, key_mngr, rows, cols, input_name_format, result_name):
-        super(MultiplicationMergeJob, self).__init__(redis)
+        super(MultiplicationMergeJob, self).__init__(redis, key_mngr)
         self.rows = rows
         self.cols = cols
         self.input_name_format = input_name_format
@@ -158,7 +158,7 @@ class MultiplicationMergeJob(jobs.Job):
 class CellwiseOperationJob(BinaryMatrixJob):
         
     def __init__(self, redis, key_mngr, matrix1, matrix2, operation, result_name):
-        super(CellwiseOperationJob, self).__init__(redis, matrix1, matrix2)
+        super(CellwiseOperationJob, self).__init__(redis, key_mngr, matrix1, matrix2)
         self.operation = operation
         self.result_name = result_name
         self.key_mngr = key_mngr
@@ -174,8 +174,8 @@ class CellwiseOperationJob(BinaryMatrixJob):
         
 class EqualJob(BinaryMatrixJob):
     
-    def __init__(self, redis, matrix1, matrix2):
-        super(EqualJob, self).__init__(redis, matrix1, matrix2)
+    def __init__(self, redis, key_mngr, matrix1, matrix2):
+        super(EqualJob, self).__init__(redis, key_mngr, matrix1, matrix2)
     
     def run(self):
         result_key = 'equal(' + self.matrix1.name() + ',' + self.matrix2.name() + ')'

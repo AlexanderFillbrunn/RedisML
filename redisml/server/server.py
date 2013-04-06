@@ -1,7 +1,8 @@
 import matrix
 import json
 from redis import Redis
-from keymanager import KeyManager
+import redisml.shared.redis_constants as const
+from redisml.shared.keymanager import KeyManager
 
 class Server:
     def __init__(self, config):
@@ -20,11 +21,11 @@ class Server:
         # Reset client ids
         self.redis.set('client_id', 0)
         # Clear the list of free jobs
-        self.redis.delete('free_jobs')
-        self.redis.delete('slaves')
+        self.redis.delete(const.FREE_JOBS_KEY.format(self.name))
+        self.redis.delete(const.SLAVE_LIST_KEY.format(self.name))
         slaves = []
         for k,v in config['redis_slaves'].items():
-            self.redis.set('slave:' + k, json.dumps(v))
-            self.redis.lpush('slaves', k)
+            self.redis.set(const.SLAVE_KEY.format(self.name, k), json.dumps(v))
+            self.redis.lpush(const.SLAVE_LIST_KEY.format(self.name), k)
             slaves.append(k)
-        self.key_mngr = KeyManager(slaves)
+        self.key_mngr = KeyManager(slaves, self.name)
