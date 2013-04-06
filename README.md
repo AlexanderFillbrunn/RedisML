@@ -37,7 +37,7 @@ The server is configured using a file in json format. It can look as follows:
     "server_name" : "sample_server",
     "matrix" :
     {
-        "block_size"  : 128
+        "block_size"  : 256
     },
     "redis_master" :
     {
