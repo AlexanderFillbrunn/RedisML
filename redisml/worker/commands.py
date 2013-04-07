@@ -77,15 +77,7 @@ def ms(cmd_ctx):
     scalar = float(cmd_ctx.cmdArgs[0])
     op = cmd_ctx.cmdArgs[1]
     matrix = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
-    
-    if op == "*":
-        result = matrix * scalar
-    elif op == "/":
-        result = matrix / scalar
-    elif op == "+":
-        result = matrix + scalar
-    elif op == "-":
-        result = matrix - scalar
+    result = eval('m ' + op + ' x', { 'm' : matrix, 'x' : scalar})
         
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], result)
 
@@ -157,16 +149,8 @@ def cw(cmd_ctx):
         n = m
     else:
         n = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
-    if op == "+":
-        res = m+n
-    elif op == "-":
-        res = m-n
-    elif op == "/":
-        res = m/n
-    elif op == "*":
-        res = m*n
-    else:
-        raise Exception('Unknown operator ' + op)
+
+    res = eval('m ' + op + ' n', { 'm' : m, 'n' : n })     
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], res)
 
 def count(cmd_ctx):
