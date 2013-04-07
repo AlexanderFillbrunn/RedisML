@@ -17,7 +17,7 @@ class Server:
         self.name = config['server_name']
         self.redis = Redis(config['redis_master']['host'], port=config['redis_master']['port'], db=config['redis_master']['db'])
         self.__init_redis(config)
-        self.key_manager = __create_key_manager(config)
+        self.key_manager = self.__create_key_manager(config)
         self.context = Context(self.redis, self.key_manager,
                                 config['matrix']['block_size'],
                                 config['jobs']['timeout'],
