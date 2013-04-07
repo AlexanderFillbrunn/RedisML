@@ -4,6 +4,7 @@ import math
 import logging
 import json
 import pickle
+import scipy.stats as stats
 from redis import Redis
 from redisml.shared import redis_constants as const
 from redisml.shared.redis_wrapper import RedisWrapper
@@ -21,7 +22,7 @@ def _get_matrix_block(cmd_ctx, block_name):
 def _save_matrix_block(cmd_ctx, block_name, data):
     slave = _get_redis_slave(cmd_ctx, const.get_slave_name(block_name))
     slave.set(block_name, data.dumps())
-
+    
 def fail(cmd_ctx):
     raise Exception('Fail test')
     
@@ -189,13 +190,30 @@ def count(cmd_ctx):
     key = cmd_ctx.cmdArgs[1]
     pipe = cmd_ctx.redis_master.pipeline()
     for i in range(0, m.shape[1]):
-        for j in range(0, m.shape[0]):
-            val = m[j,i]
-            pref = key + ':' + str(i)
+        freq = stats.itemfreq(m[:,i])
+        pref = key + ':' + str(i)
+        for row in freq:
+            val = row[0]
+            num = int(row[1])
             pipe.sadd(pref, val) # Add value to set of found values in this column
-            pipe.incr(pref + ':' + str(val)) # Increase counter for the value in this column
+            pipe.incr(pref + ':' + str(val), num) # Increase counter for the value in this column
     pipe.execute()
     
+def mcreate(cmd_ctx):
+    fill = cmd_ctx.cmdArgs[0]
+    rows = int(cmd_ctx.cmdArgs[1])
+    cols = int(cmd_ctx.cmdArgs[2])
+    
+    m = None
+    if fill.lower() == 'rand':
+        m = numpy.random.rand(rows, cols)
+    if fill == '0':
+        m = numpy.zeros((rows, cols))
+    else:
+        m = numpy.ones((rows, cols)) * double(fill)
+        
+    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], m)
+        
 def k_means_recalc(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     d = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])

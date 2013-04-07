@@ -10,3 +10,5 @@ utilities/genmat.py
 utilities/test.csv
 
 delete_pyc.py
+
+tests/manual_test.py

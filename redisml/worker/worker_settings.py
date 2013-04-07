@@ -12,8 +12,7 @@ COMMAND_MAPPING = {
     'MS'           : 'redisml.worker.commands.ms',
     # Matrix creation
     'MRAND'        : 'redisml.worker.commands.mrand',
-    'MONES'        : 'redisml.worker.commands.mones',
-    'MZERO'        : 'redisml.worker.commands.mzeros',
+    'MCREATE'      : 'redisml.worker.commands.mcreate',
     # Unary operations
     'MTRANS'       : 'redisml.worker.commands.mtrans',
     'MTRACE'       : 'redisml.worker.commands.mtrace',
