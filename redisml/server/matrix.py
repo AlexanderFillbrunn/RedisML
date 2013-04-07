@@ -15,10 +15,8 @@ import sys
 
 class MatrixFactory:
     mcounter = 0
-    def __init__(self, redis, key_mngr, block_size):
-        self.redis = redis
-        self.block_size = block_size
-        self.key_manager = key_mngr
+    def __init__(self, context):
+        self.context = context
     
     @staticmethod
     def getRandomMatrixName():
@@ -27,10 +25,13 @@ class MatrixFactory:
         return const.MATRIX_NAME_FORMAT.format(str(MatrixFactory.mcounter), str(rnd))
         
     def matrix_from_numpy(self, mat, name=''):
-        return Matrix.from_numpy(mat, self.block_size, self.redis, self.key_manager, name=name if not len(name) == 0 else MatrixFactory.getRandomMatrixName())
+        mat_name = name
+        if len(name) == 0:
+            mat_name = MatrixFactory.getRandomMatrixName()
+        return Matrix.from_numpy(mat, self.context, name=mat_name)
     
     def matrix_from_name(self, name):
-        return Matrix.from_name(name, self.redis, self.key_manager)
+        return Matrix.from_name(name, self.context)
     
 class Matrix:
     def __init__(self, rows, cols, name, block_size, redis, key_mngr, initialized=False):
@@ -73,23 +74,23 @@ class Matrix:
         pass
     
     @staticmethod
-    def from_numpy(mat, block_size, redis, key_mngr, name=None):
+    def from_numpy(mat, context, name=None):
         if len(mat.shape) != 2:
             raise BaseException('Shape of input matrix must be of size 2')
         if name == None:
             name = MatrixFactory.getRandomMatrixName()
             
         # Check if matrix already exists
-        if redis.exists(const.INFO_FORMAT.format(name)):
+        if context.redis_master.exists(const.INFO_FORMAT.format(name)):
             raise BaseException('A matrix with this name already exists on the redis server')
         
         rows = mat.shape[0]
         cols = mat.shape[1]
 
 
-        redwrap = RedisWrapper(redis, key_mngr)
+        redwrap = RedisWrapper(context.redis_master, context.key_manager)
 
-        m = Matrix(rows, cols, name, block_size, redis, key_mngr, True)
+        m = Matrix(rows, cols, name, context.block_size, context.redis_master, context.key_manager, True)
         # Separate blocks and send them to the redis server
         for j in range(0, m.row_blocks()):
             for i in range(0, m.col_blocks()):
@@ -101,10 +102,12 @@ class Matrix:
         return m
     
     @staticmethod
-    def from_name(name, redis, key_mngr):
+    def from_name(name, context):
         info = redis.hgetall(const.INFO_FORMAT.format(name))
         if info:
-            return Matrix(info['rows'], info['cols'], name, info['block_size'], redis, key_mngr, True)
+            if info['block_size'] != context.block_size:
+                raise BaseException('Matrix has the wrong block size')
+            return Matrix(info['rows'], info['cols'], name, context.block_size, context.redis_master, context.key_manager, True)
         else:
             raise BaseException('Matrix with the name ' + name + ' does not exist on database')
     #
