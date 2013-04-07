@@ -203,7 +203,6 @@ def mcreate(cmd_ctx):
     fill = cmd_ctx.cmdArgs[0]
     rows = int(cmd_ctx.cmdArgs[1])
     cols = int(cmd_ctx.cmdArgs[2])
-    
     m = None
     if fill.lower() == 'rand':
         m = numpy.random.rand(rows, cols)
@@ -211,7 +210,6 @@ def mcreate(cmd_ctx):
         m = numpy.zeros((rows, cols))
     else:
         m = numpy.ones((rows, cols)) * double(fill)
-        
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], m)
         
 def k_means_recalc(cmd_ctx):
