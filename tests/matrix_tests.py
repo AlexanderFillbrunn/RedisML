@@ -40,22 +40,22 @@ class MatrixTestCase(unittest.TestCase):
         m = numpy.arange(12).reshape(3,4)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums()
-        res = m.sum(axis=0)
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[0,:], err_msg='Numpy and RedisML produce different results on colsums')
+        res = numpy.matrix([m.sum(axis=0)])
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
     
     def testSpecialColSums(self):
         m = numpy.arange(9).reshape(3,3)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums(expr='x+1')
-        res = m.sum(axis=0) + 3
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[0,:], err_msg='Numpy and RedisML produce different results on colsums')
+        res = numpy.matrix([m.sum(axis=0)]) + 3
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
     
     def testRowSums(self):
         m = numpy.arange(12).reshape(3,4)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.row_sums()
-        res = m.sum(axis=1)
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix()[:,0], err_msg='Numpy and RedisML produce different results on colsums')
+        res = numpy.matrix([m.sum(axis=1)])
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
 
     def testCellAccess(self):
         m = numpy.random.rand(1024,1024)

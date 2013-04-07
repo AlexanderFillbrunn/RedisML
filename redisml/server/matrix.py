@@ -334,12 +334,12 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
-                colsum_cmd = command_builder.build_command('COLSUM', self.block_name(row, col), expr, mname)
+                colsum_cmd = command_builder.build_command('MSUM', self.block_name(row, col), expr, '0', mname)
                 colsum_job.add_subjob(colsum_cmd)
         try:
             colsum_job.execute()
         except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'COLSUM')
+            raise exceptions.MatrixOperationException(str(e), 'MSUM')
         
         # Now sum up the vectors for each row
         for col in range(0, self.col_blocks()):
@@ -377,12 +377,12 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
-                rowsum_cmd = command_builder.build_command('ROWSUM', self.block_name(row, col), expr, mname)
+                rowsum_cmd = command_builder.build_command('MSUM', self.block_name(row, col), expr, '1', mname)
                 rowsum_job.add_subjob(rowsum_cmd)
         try:
             rowsum_job.execute()
         except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'ROWSUM')
+            raise exceptions.MatrixOperationException(str(e), 'MSUM')
         
         # Now sum up the vectors for each column
         for row in range(0, self.row_blocks()):

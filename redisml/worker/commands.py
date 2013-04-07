@@ -89,33 +89,17 @@ def ms(cmd_ctx):
         
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], result)
 
-def colsum(cmd_ctx):
+def msum(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
-    #if cmd_ctx.cmdArgs[1] == 'x':
-    #    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2], m.sum(axis=0))
-    #else:
-    code = compile(cmd_ctx.cmdArgs[1], '', 'eval')
-    res = numpy.empty([2, m.shape[1]])
-    for i in range(0, m.shape[1]):
-        s = 0
-        for x in m[:,i]:
-            s += eval(code)
-            res[0,i] = s
-    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2], res)
-    
-def rowsum(cmd_ctx):
-    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
-    #if cmd_ctx.cmdArgs[1] == 'x':
-    #    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2], m.sum(axis=1))
-    #else:
-    code = compile(cmd_ctx.cmdArgs[1], '', 'eval')
-    res = numpy.empty([m.shape[0], 2])
-    for i in range(0, m.shape[0]):
-        s = 0
-        for x in m[i,:]:
-            s += eval(code)
-        res[i,0] = s
-    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2], res)
+    axis = cmd_ctx.cmdArgs[2]
+    code = compile('numpy.sum(' + cmd_ctx.cmdArgs[1] + ', axis=' + axis + ')', '', 'eval')
+    tmp = eval(code, { "numpy" : numpy, "x" : m})
+    res = None
+    if axis == 'None':
+        res = numpy.matrix([tmp])
+    else:
+        res = numpy.matrix(tmp)
+    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], res)
 
 def mtrace(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])

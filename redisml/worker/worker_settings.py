@@ -17,8 +17,6 @@ COMMAND_MAPPING = {
     'MTRANS'       : 'redisml.worker.commands.mtrans',
     'MTRACE'       : 'redisml.worker.commands.mtrace',
     'MSUM'         : 'redisml.worker.commands.msum',
-    'ROWSUM'       : 'redisml.worker.commands.rowsum',
-    'COLSUM'       : 'redisml.worker.commands.colsum',
     # Misc
     'DEL'          : 'redisml.worker.commands.delete',
     'EQUAL'        : 'redisml.worker.commands.equal',
