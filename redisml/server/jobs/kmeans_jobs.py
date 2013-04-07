@@ -4,8 +4,8 @@ import redisml.server
 
 class KMeansDistanceJob(jobs.Job):
 
-    def __init__(self, redis, key_mngr, data, centers, output_prefix):
-        super(KMeansDistanceJob, self).__init__(redis, key_mngr)
+    def __init__(self, context, data, centers, output_prefix):
+        super(KMeansDistanceJob, self).__init__(context)
         self.data = data
         self.centers = centers
         self.output_prefix = output_prefix
@@ -26,8 +26,8 @@ class KMeansDistanceJob(jobs.Job):
         
 class KMeansRecalculationJob(jobs.Job):
     
-    def __init__(self, redis, key_mngr, data, distance_matrix, center_prefix, count_prefix):
-        super(KMeansRecalculationJob, self).__init__(redis, key_mngr)
+    def __init__(self, context, data, distance_matrix, center_prefix, count_prefix):
+        super(KMeansRecalculationJob, self).__init__(context)
         self.data = data
         self.distance_matrix = distance_matrix
         self.center_prefix = center_prefix

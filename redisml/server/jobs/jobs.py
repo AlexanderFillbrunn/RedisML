@@ -1,6 +1,6 @@
 import json, threading, logging
 from sets import Set
-from redisml.server import settings, exceptions
+from redisml.server import exceptions
 from redisml.shared import events
 
 class Subjob(object):
@@ -10,8 +10,8 @@ class Subjob(object):
         self.redis = redis
         self.running = False
         self.currentParent = None
+        self.timeout = 0
         self.timer = None
-        self.timeout = settings.DEFAULT_JOB_TIMEOUT
         self.timeoutOccurred = events.EventHook()
         self.free_jobs_key = free_jobs_key
 
@@ -57,40 +57,39 @@ class Subjob(object):
         self.timer = None
     
 class Job(object):
-    def __init__(self, redis, key_mngr):
-        self.redis = redis
+    def __init__(self, context):
         self.subjobs = []
-        self.subjobTimeout = settings.DEFAULT_JOB_TIMEOUT
+        self.context = context
         # Get keys
-        self.results_channel_name = key_mngr.get_results_channel_name()
-        self.free_jobs_key = key_mngr.get_free_jobs_key()
-        self.job_ids_key = key_mngr.get_job_ids_key()
+        self.results_channel_name = context.key_manager.get_results_channel_name()
+        self.free_jobs_key = context.key_manager.get_free_jobs_key()
+        self.job_ids_key = context.key_manager.get_job_ids_key()
 
     def add_subjob(self, command):
-        s = Subjob(len(self.subjobs), command, self.redis, self.free_jobs_key)
-        s.setTimeout(self.subjobTimeout)
+        s = Subjob(len(self.subjobs), command, self.context.redis_master, self.free_jobs_key)
+        s.setTimeout(self.context.job_timeout)
         s.timeoutOccurred += self.subjobTimeoutOccurred
         self.subjobs.append(s)
         return s
     
     def setSubjobTimeout(self, to):
-        self.subjobTimeout = to
+        self.context.job_timeout = to
         for s in self.subjobs:
-            s.setTimeout(self.subjobTimeout)
+            s.setTimeout(self.context.job_timeout)
     
     def __getLogger(self, jobid):
         logger = logging.getLogger('jobs').getChild('job' + str(jobid))
         return logger
     
     def subjobTimeoutOccurred(self, sender):
-        self.redis.publish(self.results_channel_name, json.dumps({'id' : sender.getFullID(), 'success' : False, 'reason' : 'timeout', 'message' : 'Timeout after ' + str(sender.timeout) + ' seconds' }))
+        self.context.redis_master.publish(self.results_channel_name, json.dumps({'id' : sender.getFullID(), 'success' : False, 'reason' : 'timeout', 'message' : 'Timeout after ' + str(sender.timeout) + ' seconds' }))
     
     def execute(self):
         # For each execution a new job id is assigned so a job can safely be executed multiple times
-        jobid = self.redis.incr(self.job_ids_key)
+        jobid = self.context.redis_master.incr(self.job_ids_key)
         logger = self.__getLogger(jobid)
         # Register pubsub for listening for job results
-        pubsub = self.redis.pubsub()
+        pubsub = self.context.redis_master.pubsub()
         pubsub.subscribe(self.results_channel_name)
         
         self.returned_jobs = Set()
@@ -122,7 +121,7 @@ class Job(object):
                     logger.info('Subjob ' + msg['id'] + ' successfully executed by client ' + msg['client'])
                 else:
                     count = self.jobcount[minor]
-                    if count < settings.MAX_JOB_EXECUTIONS or settings.MAX_JOB_EXECUTIONS == 0:
+                    if count < context.max_job_execs or context.max_job_execs == 0:
 
                         logger.warn('Subjob {0} failed. Reason: {1}. Try: {2}'.format(msg['id'], msg['reason'], str(self.jobcount[minor])))
                         
