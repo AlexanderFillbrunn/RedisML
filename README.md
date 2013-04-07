@@ -35,6 +35,11 @@ The server is configured using a file in json format. It can look as follows:
 <pre>
 {
     "server_name" : "sample_server",
+    "jobs" :
+    {
+        "max_execs" : 3,
+        "timeout"   : 10
+    },
     "matrix" :
     {
         "block_size"  : 256
@@ -47,15 +52,14 @@ The server is configured using a file in json format. It can look as follows:
     },
     "redis_slaves" :
     {
-        "slave1"  : { "host" : "localhost", "port" : 6379, "db" : 1 },
-        "slave2"  : { "host" : "localhost", "port" : 6379, "db" : 2 }
+        "master"  : { "host" : "localhost", "port" : 6379, "db" : 0 }
     }
-}
-</pre>
+}</pre>
 </code>
 
-Currently the configuration consists of four parts:
+Currently the configuration consists of five parts:
 * The server name is used to distinguish several redisml servers that use the same redis instance as a master.
-* The matrix dictionary contains information about the matrices that are created with this server. Currently this is only the block size.
+* The "jobs" dictionary contains job configuration values. "max_execs" sets the number of times the server tries to execute a job and "timeout" sets the time in seconds that the server waits for a job to be executed before submitting it again.
+* The "matrix" dictionary contains information about the matrices that are created with this server. Currently this is only the block size.
 * "redis_master" contains information about which redis instance is used as a redis master. This is where all the management information about jobs and matrices is stored.
 * "redis_slaves" contains all redis instances that are used for storing matrix blocks. In this example blocks are distributed over 2 databases on the same redis instance.
