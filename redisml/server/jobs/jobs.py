@@ -121,8 +121,7 @@ class Job(object):
                     logger.info('Subjob ' + msg['id'] + ' successfully executed by client ' + msg['client'])
                 else:
                     count = self.jobcount[minor]
-                    if count < context.max_job_execs or context.max_job_execs == 0:
-
+                    if count < self.context.max_job_execs or self.context.max_job_execs == 0:
                         logger.warn('Subjob {0} failed. Reason: {1}. Try: {2}'.format(msg['id'], msg['reason'], str(self.jobcount[minor])))
                         
                         # Try again

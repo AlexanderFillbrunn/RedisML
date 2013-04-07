@@ -33,11 +33,11 @@ class Worker:
                 # print job_str
                 job = json.loads(job_str)
                 # logging.info('New job (' + str(job_id) + '): ' + job['cmd'])
-                try:
-                    command_handler.execute(self.redis, self.server_name, slaves, job['cmd'])
-                except Exception, e:
-                    self.__fail(job_id, str(e))
-                    continue
+                #try:
+                command_handler.execute(self.redis, self.server_name, slaves, job['cmd'])
+                #except Exception, e:
+                #    self.__fail(job_id, str(e))
+                #    continue
                 self.__finish(job_id)
     
     def __fail(self, job_id, message):
