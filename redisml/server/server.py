@@ -8,14 +8,14 @@ class Server:
     def __init__(self, config):
         self.name = config['server_name']
         self.redis = Redis(config['redis_master']['host'], port=config['redis_master']['port'], db=config['redis_master']['db'])
-        self.matrix_factory = matrix.MatrixFactory(self.redis, config['matrix']['block_size'])
         self.__init_redis(config)
+        self.matrix_factory = matrix.MatrixFactory(self.redis, self.key_mngr, config['matrix']['block_size'])
         
     def matrix_from_numpy(self, mat, name=''):
-        return self.matrix_factory.matrix_from_numpy(mat, self.key_mngr, name)
+        return self.matrix_factory.matrix_from_numpy(mat, name)
         
     def matrix_from_name(self, name):
-        return self.matrix_factory.matrix_from_name(name, self.key_mngr)
+        return self.matrix_factory.matrix_from_name(name)
         
     def __init_redis(self, config):
         # Reset client ids

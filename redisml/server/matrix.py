@@ -15,9 +15,10 @@ import sys
 
 class MatrixFactory:
     mcounter = 0
-    def __init__(self, redis, block_size):
+    def __init__(self, redis, key_mngr, block_size):
         self.redis = redis
         self.block_size = block_size
+        self.key_manager = key_mngr
     
     @staticmethod
     def getRandomMatrixName():
@@ -25,11 +26,11 @@ class MatrixFactory:
         rnd = random.randint(0,99999)
         return const.MATRIX_NAME_FORMAT.format(str(MatrixFactory.mcounter), str(rnd))
         
-    def matrix_from_numpy(self, mat, key_mngr, name=''):
-        return Matrix.from_numpy(mat, self.block_size, self.redis, key_mngr, name=name if not len(name) == 0 else MatrixFactory.getRandomMatrixName())
+    def matrix_from_numpy(self, mat, name=''):
+        return Matrix.from_numpy(mat, self.block_size, self.redis, self.key_manager, name=name if not len(name) == 0 else MatrixFactory.getRandomMatrixName())
     
-    def matrix_from_name(self, name, key_mngr):
-        return Matrix.from_name(name, self.redis, key_mngr)
+    def matrix_from_name(self, name):
+        return Matrix.from_name(name, self.redis, self.key_manager)
     
 class Matrix:
     def __init__(self, rows, cols, name, block_size, redis, key_mngr, initialized=False):
