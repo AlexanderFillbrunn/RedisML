@@ -191,20 +191,21 @@ def k_means_recalc(cmd_ctx):
     if len(cmd_ctx.cmdArgs) > 3:
         counter_prefix = cmd_ctx.cmdArgs[3]
     result = {}
-    for row in range(0,len(d)):
-        min = None
-        min_col = -1
-        for col in range(0,len(d[row])):
-            if min == None or d[row,col] < min:
-                min = d[row,col]
-                min_col = col
+    
+    mincols = numpy.argmin(d, axis=1)
+    
+    # Find the nearest center for each record and add the record to the centers sum
+    # Also count how many records are nearest to each center
+    rowcount = 0
+    for col in mincols:
         if counter_prefix != None:
-            cmd_ctx.redis_master.incr(counter_prefix + str(min_col))
-        if result.has_key(min_col):
-            result[min_col] += m[row]
+            cmd_ctx.redis_master.incr(counter_prefix + str(col))
+        if result.has_key(col):
+            result[col] += m[rowcount]
         else:
-            result[min_col] = m[row]
-            
+            result[col] = m[rowcount]
+        rowcount += 1
+  
     for key in result.keys():
         k = result_prefix + str(key)
         tmp = cmd_ctx.redis_master.lpop(k)
