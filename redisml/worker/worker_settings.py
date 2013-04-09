@@ -16,7 +16,7 @@ COMMAND_MAPPING = {
     # Unary operations
     'MTRANS'       : 'redisml.worker.commands.mtrans',
     'MTRACE'       : 'redisml.worker.commands.mtrace',
-    'MSUM'         : 'redisml.worker.commands.msum',
+    'MAGGR'        : 'redisml.worker.commands.maggr',
     # Misc
     'DEL'          : 'redisml.worker.commands.delete',
     'EQUAL'        : 'redisml.worker.commands.equal',

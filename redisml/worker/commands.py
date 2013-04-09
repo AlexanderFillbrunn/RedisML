@@ -81,17 +81,19 @@ def ms(cmd_ctx):
         
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], result)
 
-def msum(cmd_ctx):
+def maggr(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     axis = cmd_ctx.cmdArgs[2]
-    code = compile('numpy.sum(' + cmd_ctx.cmdArgs[1] + ', axis=' + axis + ')', '', 'eval')
+    op = cmd_ctx.cmdArgs[3]
+    code = compile('numpy.{0}({1}, axis={2})'.format(op, cmd_ctx.cmdArgs[1], axis), '', 'eval')
     tmp = eval(code, { "numpy" : numpy, "x" : m})
     res = None
     if axis == 'None':
-        res = numpy.matrix([tmp])
+        slave = _get_redis_slave(cmd_ctx, const.get_slave_name(cmd_ctx.cmdArgs[4]))
+        slave.set(cmd_ctx.cmdArgs[4], tmp)
     else:
         res = numpy.matrix(tmp)
-    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], res)
+        _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[4], res)
 
 def mtrace(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])

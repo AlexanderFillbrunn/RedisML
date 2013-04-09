@@ -28,7 +28,15 @@ class RedisWrapper:
     def get_block(self, block_name):
         slave_redis = self.get_slave_redis(const.get_slave_name(block_name))
         return numpy.loads(slave_redis.get(block_name))
+    
+    def get_value(self, key):
+        slave_redis = self.get_slave_redis(const.get_slave_name(key))
+        return slave_redis.get(key)
         
+    def set_value(self, key, value):
+        slave_redis = self.get_slave_redis(const.get_slave_name(key))
+        return slave_redis.set(key, value)
+     
     def delete_block(self, block_name):
         slave_redis = self.get_slave_redis(const.get_slave_name(block_name))
         slave_redis.delete(block_name)

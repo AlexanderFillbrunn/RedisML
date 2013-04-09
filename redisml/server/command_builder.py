@@ -3,7 +3,7 @@ def build_command(name, *params):
     #Simple method for building commands
     output = name 
     for p in params:
-        output += ' ' + p 
+        output += ' ' + str(p)
     return output
     
 class CommandBuilder:
@@ -16,7 +16,7 @@ class CommandBuilder:
         
     def add_param(self, param):
         ''' Adds a parameter to the command '''
-        self.params.append(' ' + param)
+        self.params.append(' ' + str(param))
     
     def getCmdString(self):
         ''' Returns the built command as a string '''

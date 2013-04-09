@@ -11,11 +11,12 @@ class KeyManager:
             return self.__slaves[0]
         else:
             return self.__slaves[sum(num) % len(self.__slaves)]
-          
-    def get_block_name(self, matrix_name, row, col):
-        slave_name = self.__slaves[0]
-        if len(self.__slaves) > 1:
-            slave_name = self.__slaves[(row+col) % len(self.__slaves)]
+    
+    def get_block_name(self, matrix_name, row, col, slave_name=None):
+        if slave_name == None:
+            slave_name = self.__slaves[0]
+            if len(self.__slaves) > 1:
+                slave_name = self.__slaves[(row+col) % len(self.__slaves)]
         
         return const.get_block_name(matrix_name, slave_name, row, col)
         

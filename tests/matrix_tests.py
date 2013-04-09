@@ -131,9 +131,11 @@ class MatrixTestCase(unittest.TestCase):
         result2 = m.dot(n)
         
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results')
-        mat1.delete()
-        mat2.delete()
-        result1.delete()
+    
+    def testSum(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        self.assertAlmostEqual(m.sum(), mat1.sum())
     
     def testCellwiseMultiplication(self):
         m = numpy.random.rand(1024,1024)
@@ -141,8 +143,8 @@ class MatrixTestCase(unittest.TestCase):
         n = numpy.random.rand(1024,1024)
         mat2 = self.server.matrix_from_numpy(n)       
         res = m * n
-        result = mat1.cw_mult(mat2)        
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), res,
+        result = mat1.cw_multiply(mat2)        
+        numpy.testing.assert_array_almost_equal(result.get_numpy_matrix(), res,
                                                     err_msg='Numpy and RedisML produce different results')
     
     def testCellwiseAdd(self):

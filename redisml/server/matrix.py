@@ -320,27 +320,47 @@ class Matrix:
         res = Matrix(self.__cols, self.__rows, result_name, self.context, True)
         return res
     
+    def __aggr(self, aggr_op, expr, axis):
+
+        aggr_job = jobs.Job(self.context)
+        prefix = 'aggr_' + aggr_op + '(' + self.__name + ',' + str(axis) + ')'
+
+        # First sum up each block
+        for col in range(0, self.col_blocks()):
+            for row in range(0,self.row_blocks()):
+                mname = self.context.key_manager.get_block_name(prefix, col, row)
+                aggr_cmd = command_builder.build_command('MAGGR', self.block_name(row, col), expr, axis, aggr_op, mname)
+                aggr_job.add_subjob(aggr_cmd)
+        try:
+            aggr_job.execute()
+        except exceptions.JobException as e:
+            raise exceptions.MatrixOperationException(str(e), 'MAGGR')
+        
+        return prefix
+
+    def sum(self, expr='x'):
+        """
+            Calculates sum of all matrix elements
+        """
+        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+        total = 0
+        prefix = self.__aggr('sum', expr, None)
+        for col in range(0, self.col_blocks()):
+            for row in range(0,self.row_blocks()):
+                key = self.context.key_manager.get_block_name(prefix, col, row)
+                total += float(redwrap.get_value(key))
+        return total
+
     def col_sums(self, result_name=None, expr='x'):
         """
             Sums up each col and returns a vector of all sums
         """
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
-        colsum_job = jobs.Job(self.context)
+            
+        prefix = self.__aggr('sum', expr, 0)
         add_job = jobs.Job(self.context)
-        prefix = 'colsum(' + self.__name + ')'
-        
-        # First sum up each block
-        for col in range(0, self.col_blocks()):
-            for row in range(0,self.row_blocks()):
-                mname = self.context.key_manager.get_block_name(prefix, col, row)
-                colsum_cmd = command_builder.build_command('MSUM', self.block_name(row, col), expr, '0', mname)
-                colsum_job.add_subjob(colsum_cmd)
-        try:
-            colsum_job.execute()
-        except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'MSUM')
-        
+                
         # Now sum up the vectors for each row
         for col in range(0, self.col_blocks()):
             add_cb = command_builder.CommandBuilder('MADD')
@@ -369,21 +389,9 @@ class Matrix:
         """
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
-        rowsum_job = jobs.Job(self.context)
+        prefix = self.__aggr('sum', expr, 1)
         add_job = jobs.Job(self.context)
-        prefix = 'rowsum(' + self.__name + ')'
-        
-        # First sum up each block
-        for col in range(0, self.col_blocks()):
-            for row in range(0,self.row_blocks()):
-                mname = self.context.key_manager.get_block_name(prefix, col, row)
-                rowsum_cmd = command_builder.build_command('MSUM', self.block_name(row, col), expr, '1', mname)
-                rowsum_job.add_subjob(rowsum_cmd)
-        try:
-            rowsum_job.execute()
-        except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'MSUM')
-        
+                
         # Now sum up the vectors for each column
         for row in range(0, self.row_blocks()):
             add_cb = command_builder.CommandBuilder('MADD')
