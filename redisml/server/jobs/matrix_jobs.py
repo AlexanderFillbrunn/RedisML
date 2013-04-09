@@ -169,13 +169,13 @@ class CellwiseOperationJob(BinaryMatrixJob):
         
 class EqualJob(BinaryMatrixJob):
     
-    def __init__(self, context, matrix1, matrix2):
+    def __init__(self, context, matrix1, matrix2, result_key):
         super(EqualJob, self).__init__(context, matrix1, matrix2)
+        self.result_key = result_key
     
     def run(self):
-        result_key = 'equal(' + self.matrix1.name() + ',' + self.matrix2.name() + ')'
         for row in range(0, self.matrix1.row_blocks()):
             for col in range(0, self.matrix1.col_blocks()):
-                equal_cmd = command_builder.build_command('EQUAL', self.matrix1.block_name(row, col), self.matrix2.block_name(row, col), result_key)
+                equal_cmd = command_builder.build_command('EQUAL', self.matrix1.block_name(row, col), self.matrix2.block_name(row, col), self.result_key)
                 self.add_subjob(equal_cmd)
         self.execute()

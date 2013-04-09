@@ -510,7 +510,8 @@ class Matrix:
         if self.dimension() != m.dimension():
             return False
 
-        equals_job = matrix_jobs.EqualJob(self.context, self, m)
+        result_key = 'equal(' + self.name() + ',' + m.name() + ')'
+        equals_job = matrix_jobs.EqualJob(self.context, self, m, result_key)
         equals_job.run()
         
         pipe = self.context.redis_master.pipeline()
