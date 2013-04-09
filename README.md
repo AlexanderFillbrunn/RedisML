@@ -25,8 +25,9 @@ This assumes you are running the server and all workers on localhost. This is th
 
 1. Download redis from http://redis.io/download
 2. Add the RedisML project to your PYTHONPATH variable or the redisml directory into your Python lib folder
-3. Run the client script with the command "python worker.py sample_server"
-4. Go to tests and run python matrix_tests.py
+3. Run the redis server
+4. Run the client script with the command "python worker.py sample_server"
+5. Go to tests and run python matrix_tests.py
 
 Configuration
 -----------------------
