@@ -1,8 +1,7 @@
 
 # Divides a matrix file into several block files
-def transform(input_file, output_prefix, block_size, separator=';'):
+def transform(input_file, output_format, block_size, separator=';'):
     output_files = {}
-    output_format = output_prefix + '_{0}_{1}.blc'
     with open(input_file, 'rU') as f:
         row = 0
         for line in f:
