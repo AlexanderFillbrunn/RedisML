@@ -77,7 +77,11 @@ def ms(cmd_ctx):
     scalar = float(cmd_ctx.cmdArgs[0])
     op = cmd_ctx.cmdArgs[1]
     matrix = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
-    result = eval('m ' + op + ' x', { 'm' : matrix, 'x' : scalar})
+    result = None
+    if op == 'rdiv':
+        result = scalar / matrix
+    else:
+        result = eval('m ' + op + ' x', { 'm' : matrix, 'x' : scalar})
         
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], result)
 

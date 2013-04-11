@@ -12,6 +12,7 @@ import numpy
 import json
 import random
 import sys
+import types
 
 class MatrixFactory:
     mcounter = 0
@@ -236,16 +237,19 @@ class Matrix:
     # Matrix operations
     #
     def scalar_divide(self, scalar, result_name=None):
-        return self.__ms(scalar, "/", result_name)
+        return self.__ms(scalar, '/', result_name)
+        
+    def scalar_rdivide(self, scalar, result_name=None):
+        return self.__ms(scalar, 'rdiv', result_name)
         
     def scalar_multiply(self, scalar, result_name=None):
-        return self.__ms(scalar, "*", result_name)
+        return self.__ms(scalar, '*', result_name)
         
     def scalar_add(self, scalar, result_name=None):
-        return self.__ms(scalar, "+", result_name)
+        return self.__ms(scalar, '+', result_name)
         
     def scalar_subtract(self, scalar, result_name=None):
-        return self.__ms(scalar, "-", result_name)
+        return self.__ms(scalar, '-', result_name)
         
     def __ms(self, scalar, op, result_name=None):
         """
@@ -260,7 +264,7 @@ class Matrix:
         res = Matrix(self.__rows, self.__cols, result_name, self.context, True)
         return res
     
-    def multiply(self, m, result_name=None, transpose_self=False, transpose_m=False, negate_self=False, negate_m=False):
+    def dot(self, m, result_name=None, transpose_self=False, transpose_m=False, negate_self=False, negate_m=False):
         """
             Multiplies the matrix with another one
         """
@@ -551,6 +555,9 @@ class Matrix:
                 return False
         return True
     
+    def negate(self):
+        return self * -1
+    
     def count(self):
         """
             For each occurring value per column this method counts the number of occurrences
@@ -628,3 +635,52 @@ class Matrix:
         
     def __repr__(self):
         return self.__str__()
+        
+    # ======= Operators =======
+    
+    NUMBER_TYPES = (types.IntType, types.LongType, types.FloatType, types.ComplexType)
+    
+    def __neg__(self):
+        return self.negate()
+    
+    def __add__(self, other):
+        if isinstance(other, Matrix):
+            return self.cw_add(other)
+        elif isinstance(other, Matrix.NUMBER_TYPES):
+            return self.scalar_add(other)
+            
+    def __sub__(self, other):
+        if isinstance(other, Matrix):
+            return self.cw_subtract(other)
+        elif isinstance(other, Matrix.NUMBER_TYPES):
+            return self.scalar_subtract(other)
+            
+    def __mul__(self, other):
+        if isinstance(other, Matrix):
+            return self.cw_multiply(other)
+        elif isinstance(other, Matrix.NUMBER_TYPES):
+            return self.scalar_multiply(other)
+            
+    def __div__(self, other):
+        if isinstance(other, Matrix):
+            return self.cw_divide(other)
+        elif isinstance(other, Matrix.NUMBER_TYPES):
+            return self.scalar_divide(other)
+            
+    def __truediv__(self, other):
+        return self.__div__(other)
+        
+    def __radd__(self, other):
+        return self.__add__(other)
+            
+    def __rsub__(self, other):
+        return self.negate().__add__(other)
+            
+    def __rmul__(self, other):
+        return self.__mul__(other)
+        
+    def __rdiv__(self, other):
+        return self.scalar_rdivide(other)
+        
+    def __rtruediv__(self, other):
+        return self.__rdiv__(other)
