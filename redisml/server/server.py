@@ -25,11 +25,17 @@ class Server:
                                 config['jobs']['max_execs'])
         self.matrix_factory = matrix.MatrixFactory(self.context)
         
-    def matrix_from_numpy(self, mat, name=''):
+    def matrix_from_numpy(self, mat, name=None):
         return self.matrix_factory.matrix_from_numpy(mat, name)
         
     def matrix_from_name(self, name):
         return self.matrix_factory.matrix_from_name(name)
+      
+    def matrix_from_scalar(self, scalar, rows, cols, name=None):
+        return self.matrix_factory.matrix_from_scalar(scalar, rows, cols, name=name)
+        
+    def random_matrix(self, rows, cols, name=None):
+        return self.matrix_factory.random_matrix(rows, cols, name=name)
     
     def delete_matrix(self, name):
         info_key = const.INFO_FORMAT.format(name)
