@@ -338,6 +338,34 @@ class Matrix:
         
         return prefix
 
+    def __minmax(self, aggr, expr):
+        """
+            Calculates sum of all matrix elements
+        """
+        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+        result = None
+        prefix = self.__aggr(aggr, expr, None)
+        for col in range(0, self.col_blocks()):
+            for row in range(0,self.row_blocks()):
+                key = self.context.key_manager.get_block_name(prefix, col, row)
+                val = float(redwrap.get_value(key))
+                if result == None or (val > result and aggr == 'max') or (val < result and aggr == 'min'):
+                    result = val
+                
+        return result
+
+    def max(self, expr='x'):
+        return __minmax('max', expr)
+    
+    def min(self, expr='x'):
+        return __minmax('min', expr)
+
+    def __col_minmax(self, expr='x'):
+        pass
+        
+    def __row_minmax(self, expr='x'):
+        pass
+
     def sum(self, expr='x'):
         """
             Calculates sum of all matrix elements
@@ -559,6 +587,14 @@ class Matrix:
             for key, val in col.items():
                 col[key] = float(val) / self.__rows
         return c
+        
+    def normalize(self, result_name):
+        return self.scalar_divide(self.max(), result_name=result_name)
+        
+    def vector_norm(self, ord):
+        expr = 'numpy.power(x,' + str(ord) + ')'
+        sum = self.sum(expr=expr)
+        return sum**(1.0/ord)
         
     def toScalar(self):
         """
