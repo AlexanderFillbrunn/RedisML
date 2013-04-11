@@ -124,25 +124,6 @@ def equal(cmd_ctx):
         cmd_ctx.redis_master.rpush(key, 0)
     else:
         cmd_ctx.redis_master.rpush(key, 1)
-        
-def k_means_distance(cmd_ctx):
-    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
-    v = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
-    key = cmd_ctx.cmdArgs[len(cmd_ctx.cmdArgs)-1]
-    num_v = len(v)
-    num_r = len(m)
-    result = numpy.empty((num_r,num_v))
-    for v_row in range(0,num_v):
-        for m_row in range(0,num_r):
-            sum = 0
-            for j in range(0, m.shape[1]):
-                sum += (m[m_row,j]-v[v_row,j])**2
-            result[m_row,v_row] = sum
-    tmp = cmd_ctx.redis_master.lpop(key)
-    if tmp == None:
-        cmd_ctx.redis_master.rpush(key, result.dumps())
-    else:
-        cmd_ctx.redis_master.rpush(key, (result + numpy.loads(tmp)).dumps())
 
 def cw(cmd_ctx):
     op = cmd_ctx.cmdArgs[0]
@@ -181,7 +162,35 @@ def mcreate(cmd_ctx):
     else:
         m = numpy.ones((rows, cols)) * double(fill)
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], m)
-        
+
+def cwminmax(cmd_ctx):
+    mode = cmd_ctx.cmdArgs[0].lower()
+    m1 = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
+    m2 = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
+    if mode == 'max':
+        _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], numpy.maximum(m1, m2))
+    elif mode == 'min':
+        _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], numpy.minimum(m1, m2))
+
+def k_means_distance(cmd_ctx):
+    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
+    v = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
+    key = cmd_ctx.cmdArgs[len(cmd_ctx.cmdArgs)-1]
+    num_v = len(v)
+    num_r = len(m)
+    result = numpy.empty((num_r,num_v))
+    for v_row in range(0,num_v):
+        for m_row in range(0,num_r):
+            sum = 0
+            for j in range(0, m.shape[1]):
+                sum += (m[m_row,j]-v[v_row,j])**2
+            result[m_row,v_row] = sum
+    tmp = cmd_ctx.redis_master.lpop(key)
+    if tmp == None:
+        cmd_ctx.redis_master.rpush(key, result.dumps())
+    else:
+        cmd_ctx.redis_master.rpush(key, (result + numpy.loads(tmp)).dumps())
+    
 def k_means_recalc(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     d = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])

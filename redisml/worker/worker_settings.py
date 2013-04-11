@@ -8,6 +8,7 @@ COMMAND_MAPPING = {
     'DIST'         : 'redisml.worker.commands.k_means_distance',
     'RECALC'       : 'redisml.worker.commands.k_means_recalc',
     'CW'           : 'redisml.worker.commands.cw',
+    'CWMINMAX'     : 'redisml.worker.commands.cwminmax',
     # Matrix-Scalar operations
     'MS'           : 'redisml.worker.commands.ms',
     # Matrix creation
