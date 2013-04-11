@@ -71,6 +71,9 @@ class Matrix:
     
     @staticmethod
     def from_numpy(mat, context, name=None):
+        """
+            Creates a matrix from a numpy matrix
+        """
         if len(mat.shape) != 2:
             raise BaseException('Shape of input matrix must be of size 2')
         if name == None:
@@ -98,6 +101,10 @@ class Matrix:
     
     @staticmethod
     def from_name(name, context):
+        """
+            Creates a matrix object from a name.
+            This is used when the matrix blocks are already stored on the redis server, e.g. because the matrix was persisted earlier
+        """
         info = redis.hgetall(const.INFO_FORMAT.format(name))
         if info:
             if info['block_size'] != context.block_size:
@@ -108,14 +115,20 @@ class Matrix:
      
     @staticmethod       
     def from_scalar(scalar, rows, cols, context, name=None):
+        """
+            Creates a matrix where each element is the given scalar value
+        """
         if name == None:
             name = MatrixFactory.getRandomMatrixName()
         create_job = matrix_jobs.CreateMatrixJob(context, scalar, rows, cols, name)
         create_job.run()
         return Matrix(rows, cols, name, context)
     
-    @staticmethod    
+    @staticmethod  
     def random(rows, cols, context, name=None):
+        """
+            Creates a matrix with uniformly distributed random content between 0.0 and 1.0
+        """
         if name == None:
             name = MatrixFactory.getRandomMatrixName()
         create_job = matrix_jobs.CreateMatrixJob(context, 'rand', rows, cols, name)
@@ -126,21 +139,39 @@ class Matrix:
     # Getters for matrix properties
     #
     def block_size(self):
+        """
+            Returns this matrix' block size
+        """
         return self.__block_size
 
     def dimension(self):
+        """
+            Returns a set containing the number of rows and columns of this matrix
+        """
         return (self.__rows, self.__cols)
     
     def can_multiply_with(self, m):
+        """
+            Returns a boolean indicating whether the dot product of this matrix with the given one can be calculated
+        """
         return self.__cols == m.__rows and self.block_size() == m.block_size()
 
     def name(self):
+        """
+            Returns this matrix' name
+        """
         return self.__name
     
     def row_blocks(self):
+        """
+            Returns the number of row blocks this matrix is divided into
+        """
         return int(math.ceil(float(self.__rows) / self.__block_size))
         
     def col_blocks(self):
+        """
+            Returns the number of column blocks this matrix is divided into
+        """
         return int(math.ceil(float(self.__cols) / self.__block_size))
     
     def block_name(self, row, col):
@@ -190,6 +221,9 @@ class Matrix:
         return result
     
     def is_quadratic(self):
+        """
+           Returns true if the number of rows equals the number of columns 
+        """
         return self.__rows == self.__cols
     
     def print_blocks(self):
@@ -203,6 +237,20 @@ class Matrix:
                 print self.block_name(row, col)
                 print str(n)
                 print '----'
+    
+    def set_cell_value(self, row, col, val):
+        """
+            Sets the value of a single matrix cell
+        """
+        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+        block_row = int(math.floor(row / self.__block_size))
+        block_col = int(math.floor(col / self.__block_size))
+        offset_row = row % self.__block_size
+        offset_col = col % self.__block_size
+        block_name = self.block_name(block_row, block_col)
+        block = redwrap.get_block(block_name)
+        block[offset_row, offset_col] = val
+        redwrap.create_block(block_name, block)
     
     def get_cell_value(self, row, col):
         """
@@ -249,18 +297,33 @@ class Matrix:
     # Matrix operations
     #
     def scalar_divide(self, scalar, result_name=None):
+        """
+            Divides the matrix by a scalar
+        """
         return self.__ms(scalar, '/', result_name)
         
     def scalar_rdivide(self, scalar, result_name=None):
+        """
+            Calculates a matrix where a scalar is divided by each element of this matrix 
+        """
         return self.__ms(scalar, 'rdiv', result_name)
         
     def scalar_multiply(self, scalar, result_name=None):
+        """
+            Multiplies this matrix with a scalar
+        """
         return self.__ms(scalar, '*', result_name)
         
     def scalar_add(self, scalar, result_name=None):
+        """
+            Adds a scalar to each cell of the matrix
+        """
         return self.__ms(scalar, '+', result_name)
         
     def scalar_subtract(self, scalar, result_name=None):
+        """
+            Subtracts a scalar from each cell of this matrix
+        """
         return self.__ms(scalar, '-', result_name)
         
     def __ms(self, scalar, op, result_name=None):
@@ -304,18 +367,33 @@ class Matrix:
         return res
     
     def cw_add(self, m, result_name=None):
+        """
+            Cellwise addition
+        """
         return self.__cw(m, "+", result_name)
     
     def cw_subtract(self, m, result_name=None):
+        """
+            Cellwise subtraction
+        """
         return self.__cw(m, "-", result_name)
         
     def cw_multiply(self, m, result_name=None):
+        """
+            Cellwise multiplication
+        """
         return self.__cw(m, "*", result_name)
         
     def cw_divide(self, m, result_name=None):
+        """
+            Cellwise division
+        """
         return self.__cw(m, "/", result_name)
     
-    def __cw(self, m, op, result_name=None):
+    def __cw(self, m, op, result_name=None): 
+        """
+           Helper method for different cellwise functions 
+        """
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
         self.__check_blocksize(m)
@@ -336,7 +414,9 @@ class Matrix:
         return res
     
     def __aggr(self, aggr_op, expr, axis):
-
+        """
+            Helper method for different aggregation functions
+        """
         aggr_job = jobs.Job(self.context)
         prefix = 'aggr_' + aggr_op + '(' + self.__name + ',' + str(axis) + ')'
 
@@ -355,7 +435,7 @@ class Matrix:
 
     def __minmax(self, aggr, expr):
         """
-            Calculates sum of all matrix elements
+            Helper class for min and max functions
         """
         redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
         result = None
@@ -371,16 +451,16 @@ class Matrix:
         return result
 
     def max(self, expr='x'):
+        """
+            Finds the maximum element in a matrix
+        """
         return __minmax('max', expr)
     
     def min(self, expr='x'):
+        """
+           Finds the minimum element in a matrix 
+        """
         return __minmax('min', expr)
-
-    def __col_minmax(self, expr='x'):
-        pass
-        
-    def __row_minmax(self, expr='x'):
-        pass
 
     def sum(self, expr='x'):
         """
@@ -426,6 +506,9 @@ class Matrix:
         return res
         
     def col_avg(self, result_name=None, expr='x'):
+        """
+            Calculates the average value for each column
+        """
         m = self.col_sums(expr=expr)
         return m.scalar_divide(self.__rows, result_name=result_name)
         
@@ -455,6 +538,13 @@ class Matrix:
         
         res = Matrix(self.__rows, 1, result_name, self.context)
         return res
+        
+    def row_avg(self, result_name=None, expr='x'):
+        """
+            Calculates the average value for each row
+        """
+        m = self.row_sums(expr=expr)
+        return m.scalar_divide(self.__cols, result_name=result_name)
     
     def trace(self):
         """
@@ -570,6 +660,9 @@ class Matrix:
         return True
     
     def negate(self):
+        """
+            Negates every element in the matrix
+        """
         return self * -1
     
     def count(self):
@@ -610,9 +703,15 @@ class Matrix:
         return c
         
     def normalize(self, result_name):
+        """
+            Divides each element in the matrix by the highest element
+        """
         return self.scalar_divide(self.max(), result_name=result_name)
         
     def vector_norm(self, ord):
+        """
+            Calculates the vector norm of the given order
+        """
         expr = 'numpy.power(x, ' + str(ord) + ')'
         sum = self.sum(expr=expr)
         return sum**(1.0/ord)
@@ -627,10 +726,17 @@ class Matrix:
         return redwrap.get_block(self.block_name(0,0))[0,0]
     
     def __check_blocksize(self, m):
+        """
+            Checks if a matrix has the same block size as this one.
+            If not, an exception is thrown.
+        """
         if self.block_size() != m.block_size():
             raise Exception("Block sizes do not match")
     
     def __build_modifier_string(self, bools, modifiers):
+        """
+            Builds a modifier string for matrix multiplication
+        """
         if len(bools) != len(modifiers):
             raise Exception("Lengths of bools and modifiers must match")
         for m in modifiers:
