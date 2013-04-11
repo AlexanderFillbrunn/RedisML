@@ -1,13 +1,13 @@
-import command_parser
+import redisml.shared.commands as cmd
 import worker_settings
 from command_context import CommandContext
 from redisml.shared.keymanager import KeyManager
 
 def execute(redis_master, server_name, slaves, cmd_str):
     cmds = cmd_str.split('\n')
-    for cmd in cmds:
+    for comm in cmds:
         # get command name and parameters
-        c = command_parser.parse_command(cmd)
+        c = cmd.parse_command(comm)
         
         if not worker_settings.COMMAND_MAPPING.has_key(c[0]):
             raise Exception('Command ' + c[0] + ' is not registered')

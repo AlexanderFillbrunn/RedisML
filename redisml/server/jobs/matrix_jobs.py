@@ -1,5 +1,5 @@
 from redisml.server.jobs import jobs
-import redisml.server.command_builder as command_builder
+import redisml.shared.commands as cmd
 
 class UnaryMatrixJob(jobs.Job):
     def __init__(self, context, matrix):
@@ -34,7 +34,7 @@ class MatrixScalarJob(jobs.Job):
     def run(self):
         for col in range(0, self.matrix.col_blocks()):
             for row in range(0,self.matrix.row_blocks()):
-                mult_cmd = command_builder.build_command('MS', str(self.scalar), self.operation,
+                mult_cmd = cmd.build_command('MS', str(self.scalar), self.operation,
                                                             self.matrix.block_name(row, col),
                                                             self.context.key_manager.get_block_name(self.result_name, row, col))
                 self.add_subjob(mult_cmd)
@@ -48,7 +48,7 @@ class TraceJob(UnaryMatrixJob):
         
     def run(self):
         for k in range(0, self.matrix.row_blocks()):
-            trace_cmd = command_builder.build_command('MTRACE', self.matrix.block_name(k, k), self.output_key)
+            trace_cmd = cmd.build_command('MTRACE', self.matrix.block_name(k, k), self.output_key)
             self.add_subjob(trace_cmd)
         self.execute()
         
@@ -65,7 +65,7 @@ class CountJob(UnaryMatrixJob):
         for col in range(0, self.matrix.col_blocks()):
             key = self.output_prefix + str(col)
             for row in range(0, self.matrix.row_blocks()):
-                count_cmd = command_builder.build_command('COUNT', self.matrix.block_name(row, col), key)
+                count_cmd = cmd.build_command('COUNT', self.matrix.block_name(row, col), key)
                 self.add_subjob(count_cmd)
         self.execute()
 
@@ -78,7 +78,7 @@ class TransposeJob(UnaryMatrixJob):
     def run(self):
         for col in range(0, self.matrix.col_blocks()):
             for row in range(0,self.matrix.row_blocks()):
-                transp_cmd = command_builder.build_command('MTRANS',
+                transp_cmd = cmd.build_command('MTRANS',
                                                             self.matrix.block_name(row, col),
                                                             self.context.key_manager.get_block_name(self.result_name, col, row))
                 self.add_subjob(transp_cmd)
@@ -123,8 +123,8 @@ class MultiplicationJob(BinaryMatrixJob):
                 for col2 in range(0,self.matrix1.row_blocks()):
                     m1_block_name = self.matrix1.block_name(col, row) if self.transpose_m1 else self.matrix1.block_name(row, col)
                     m2_block_name = self.matrix2.block_name(col2, col) if self.transpose_m2 else self.matrix2.block_name(col, col2)
-                    mult_cmd = command_builder.build_command('MMULT',     mod, m1_block_name, m2_block_name,
-                                                                        self.result_name_format.format(self.context.key_manager.get_slave(col, row, col2), col, row, col2))
+                    mult_cmd = cmd.build_command('MMULT', mod, m1_block_name, m2_block_name,
+                                                            self.result_name_format.format(self.context.key_manager.get_slave(col, row, col2), col, row, col2))
                     self.add_subjob(mult_cmd)
         self.execute()
 
@@ -139,8 +139,8 @@ class MultiplicationMergeJob(jobs.Job):
     def run(self):
         for col in range(0, self.cols):
             for row in range(0,self.rows):
-                add_cb = command_builder.CommandBuilder('MADD')
-                del_cb = command_builder.CommandBuilder('DEL')
+                add_cb = cmd.CommandBuilder('MADD')
+                del_cb = cmd.CommandBuilder('DEL')
                 for col2 in range(0,self.rows):
                     mname = self.input_name_format.format(self.context.key_manager.get_slave(col2, row, col), col2, row, col)
                     add_cb.add_param(mname)
@@ -176,6 +176,6 @@ class EqualJob(BinaryMatrixJob):
     def run(self):
         for row in range(0, self.matrix1.row_blocks()):
             for col in range(0, self.matrix1.col_blocks()):
-                equal_cmd = command_builder.build_command('EQUAL', self.matrix1.block_name(row, col), self.matrix2.block_name(row, col), self.result_key)
+                equal_cmd = cmd.build_command('EQUAL', self.matrix1.block_name(row, col), self.matrix2.block_name(row, col), self.result_key)
                 self.add_subjob(equal_cmd)
         self.execute()

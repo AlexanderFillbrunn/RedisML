@@ -1,5 +1,5 @@
 from redisml.server.jobs import jobs
-import redisml.server.command_builder as command_builder
+import redisml.shared.commands as cmd
 import redisml.server
 
 class KMeansDistanceJob(jobs.Job):
@@ -16,7 +16,7 @@ class KMeansDistanceJob(jobs.Job):
             name = self.output_prefix + '_' + str(row)
             parts.append(name)
             for col in range(0, self.data.col_blocks()):
-                dist_cmd = command_builder.CommandBuilder('DIST')
+                dist_cmd = cmd.CommandBuilder('DIST')
                 dist_cmd.add_param(self.data.block_name(row, col))
                 dist_cmd.add_param(self.centers.block_name(0, col))
                 dist_cmd.add_param(name)
@@ -36,13 +36,13 @@ class KMeansRecalculationJob(jobs.Job):
     def run(self):
         num_centers = self.distance_matrix.dimension()[1]
         for row in range(0, self.data.row_blocks()):
-            recalc_cmd = command_builder.build_command('RECALC', self.data.block_name(row, 0),
+            recalc_cmd = cmd.build_command('RECALC', self.data.block_name(row, 0),
                                                                  self.distance_matrix.block_name(row, 0),
                                                                  self.center_prefix + '_0_',
                                                                  self.count_prefix)
             self.add_subjob(recalc_cmd)
             for col in range(1, self.data.col_blocks()):
-                recalc_cmd = command_builder.build_command('RECALC', self.data.block_name(row, col),
+                recalc_cmd = cmd.build_command('RECALC', self.data.block_name(row, col),
                                                                      self.distance_matrix.block_name(row, 0),
                                                                      self.center_prefix + '_' + str(col) + '_')
                 self.add_subjob(recalc_cmd)
