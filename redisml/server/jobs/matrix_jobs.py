@@ -196,23 +196,6 @@ class MultiplicationMergeJob(jobs.Job):
                 self.add_subjob(add_cb.join(del_cb))
         self.execute()
 
-
-class CellwiseOperationJob(BinaryMatrixJob):
-        
-    def __init__(self, context, matrix1, matrix2, operation, result_name):
-        super(CellwiseOperationJob, self).__init__(context, matrix1, matrix2)
-        self.operation = operation
-        self.result_name = result_name
-        
-    def run(self):
-        for col in range(0, self.matrix1.col_blocks()):
-            for row in range(0, self.matrix1.row_blocks()):
-                cmd = command_builder.build_command("CW", self.operation, self.matrix1.block_name(row, col),
-                                                                         self.matrix2.block_name(row, col),
-                                                                         self.context.key_manager.get_block_name(self.result_name, row, col))
-                self.add_subjob(cmd)
-        self.execute()
-        
 class EqualJob(BinaryMatrixJob):
     
     def __init__(self, context, matrix1, matrix2, result_key):

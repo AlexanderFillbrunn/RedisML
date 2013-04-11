@@ -6,6 +6,7 @@ import json
 import pickle
 import scipy.stats as stats
 from redis import Redis
+import redisml.shared.commands as cmd
 from redisml.shared import redis_constants as const
 from redisml.shared.redis_wrapper import RedisWrapper
 
@@ -89,7 +90,8 @@ def maggr(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     axis = cmd_ctx.cmdArgs[2]
     op = cmd_ctx.cmdArgs[3]
-    code = compile('numpy.{0}({1}, axis={2})'.format(op, cmd_ctx.cmdArgs[1], axis), '', 'eval')
+    expr = cmd.unescape_expression(cmd_ctx.cmdArgs[1])
+    code = compile('numpy.{0}({1}, axis={2})'.format(op, expr, axis), '', 'eval')
     tmp = eval(code, { "numpy" : numpy, "x" : m})
     res = None
     if axis == 'None':
@@ -128,16 +130,15 @@ def equal(cmd_ctx):
         cmd_ctx.redis_master.rpush(key, 0)
     else:
         cmd_ctx.redis_master.rpush(key, 1)
-
-def cw(cmd_ctx):
-    op = cmd_ctx.cmdArgs[0]
-    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
-    if cmd_ctx.cmdArgs[1] == cmd_ctx.cmdArgs[2]:
+    
+def mbin(cmd_ctx):
+    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
+    if cmd_ctx.cmdArgs[1] == cmd_ctx.cmdArgs[0]:
         n = m
     else:
-        n = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
-
-    res = eval('m ' + op + ' n', { 'm' : m, 'n' : n })     
+        n = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
+    expr = cmd.unescape_expression(cmd_ctx.cmdArgs[2])
+    res = eval(expr, { 'numpy' : numpy, 'x' : m, 'y' : n })     
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], res)
 
 def count(cmd_ctx):
@@ -164,17 +165,8 @@ def mcreate(cmd_ctx):
     if fill == '0':
         m = numpy.zeros((rows, cols))
     else:
-        m = numpy.ones((rows, cols)) * double(fill)
+        m = numpy.ones((rows, cols)) * float(fill)
     _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], m)
-
-def cwminmax(cmd_ctx):
-    mode = cmd_ctx.cmdArgs[0].lower()
-    m1 = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
-    m2 = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[2])
-    if mode == 'max':
-        _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], numpy.maximum(m1, m2))
-    elif mode == 'min':
-        _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], numpy.minimum(m1, m2))
 
 def k_means_distance(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
