@@ -349,7 +349,7 @@ class Matrix:
         try:
             aggr_job.execute()
         except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), AGGREGATEOP)
+            raise exceptions.MatrixOperationException(str(e), cmd.AGGREGATEOP)
         
         return prefix
 
