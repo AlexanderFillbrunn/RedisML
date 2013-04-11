@@ -1,30 +1,29 @@
 import logging
+import redisml.shared.commands as cmd
 
 COMMAND_MAPPING = {
 
     # Matrix-Matrix operations
-    'MMULT'        : 'redisml.worker.commands.mmult',
-    'MADD'         : 'redisml.worker.commands.madd',
-    'DIST'         : 'redisml.worker.commands.k_means_distance',
-    'RECALC'       : 'redisml.worker.commands.k_means_recalc',
-    'CW'           : 'redisml.worker.commands.cw',
-    'CWMINMAX'     : 'redisml.worker.commands.cwminmax',
+    cmd.MATRIXMULT        : 'redisml.worker.commands.mmult',
+    cmd.MATRIXADDITION    : 'redisml.worker.commands.madd',
+    cmd.KMEANSDIST        : 'redisml.worker.commands.k_means_distance',
+    cmd.KMEANSRECALC      : 'redisml.worker.commands.k_means_recalc',
+    cmd.BINARYMATRIXOP    : 'redisml.worker.commands.mbin',
     # Matrix-Scalar operations
-    'MS'           : 'redisml.worker.commands.ms',
+    cmd.MATRIXSCALAROP    : 'redisml.worker.commands.ms',
     # Matrix creation
-    'MRAND'        : 'redisml.worker.commands.mrand',
-    'MCREATE'      : 'redisml.worker.commands.mcreate',
+    cmd.CREATE            : 'redisml.worker.commands.mcreate',
     # Unary operations
-    'MTRANS'       : 'redisml.worker.commands.mtrans',
-    'MTRACE'       : 'redisml.worker.commands.mtrace',
-    'MAGGR'        : 'redisml.worker.commands.maggr',
+    cmd.TRANSPOSE         : 'redisml.worker.commands.mtrans',
+    cmd.TRACE             : 'redisml.worker.commands.mtrace',
+    cmd.AGGREGATEOP       : 'redisml.worker.commands.maggr',
+    cmd.COUNT             : 'redisml.worker.commands.count',
     # Misc
-    'DEL'          : 'redisml.worker.commands.delete',
-    'EQUAL'        : 'redisml.worker.commands.equal',
-    'COUNT'        : 'redisml.worker.commands.count',
+    cmd.DELETE            : 'redisml.worker.commands.delete',
+    cmd.EQUALS            : 'redisml.worker.commands.equal',
     # Debug
-    'FAIL'         : 'redisml.worker.commands.fail',
-    'TIMEOUT'      : 'redisml.worker.commands.timeout'
+    cmd.FAIL              : 'redisml.worker.commands.fail',
+    cmd.TIMEOUT           : 'redisml.worker.commands.timeout'
 
 }
 
