@@ -119,7 +119,7 @@ class Matrix:
         return (self.__rows, self.__cols)
     
     def can_multiply_with(self, m):
-        return self.__rows == m.__cols and self.__cols == m.__rows and self.block_size() == m.block_size()
+        return self.__cols == m.__rows and self.block_size() == m.block_size()
 
     def name(self):
         return self.__name
@@ -266,7 +266,7 @@ class Matrix:
         """
         self.__check_blocksize(m)
         if not self.can_multiply_with(m):
-            raise Exception('Dimensions do not match for multiplication')
+            raise Exception('Dimensions do not match for multiplication: ' + str(self.dimension()) + ' - ' + str(m.dimension()))
         
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
