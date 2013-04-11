@@ -344,7 +344,7 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
-                aggr_cmd = cmd.build_command(AGGREGATEOP, self.block_name(row, col), cmd.escape_expression(expr), axis, aggr_op, mname)
+                aggr_cmd = cmd.build_command(cmd.AGGREGATEOP, self.block_name(row, col), cmd.escape_expression(expr), axis, aggr_op, mname)
                 aggr_job.add_subjob(aggr_cmd)
         try:
             aggr_job.execute()
