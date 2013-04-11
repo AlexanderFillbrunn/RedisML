@@ -3,9 +3,8 @@ from jobs import matrix_jobs
 from jobs import kmeans_jobs
 from redis import Redis
 import redisml.shared.redis_constants as const
-import redisml.server.command_builder as command_builder
+import redisml.shared.commands as cmd
 from redisml.shared.redis_wrapper import RedisWrapper
-from redisml.shared import command_names as cmdnames
 import exceptions
 import math
 import numpy
@@ -25,46 +24,43 @@ class MatrixFactory:
         rnd = random.randint(0,99999)
         return const.MATRIX_NAME_FORMAT.format(str(MatrixFactory.mcounter), str(rnd))
         
-    def matrix_from_numpy(self, mat, name=''):
-        mat_name = name
-        if len(name) == 0:
-            mat_name = MatrixFactory.getRandomMatrixName()
-        return Matrix.from_numpy(mat, self.context, name=mat_name)
+    def matrix_from_numpy(self, mat, name=None):
+        return Matrix.from_numpy(mat, self.context, name=name)
     
     def matrix_from_name(self, name):
         return Matrix.from_name(name, self.context)
+        
+    def random_matrix(self, rows, cols, name=None):
+        return Matrix.random(rows, cols, self.context, name=name)
+        
+    def matrix_from_scalar(self, scalar, rows, cols, name=None):
+        return Matrix.from_scalar(scalar, rows, cols, self.context, name=name)
     
 class Matrix:
-    def __init__(self, rows, cols, name, context, initialized=False):
+    def __init__(self, rows, cols, name, context):
         self.__rows = rows
         self.__cols = cols
         self.__name = name
         self.__persist = False
         self.context = context
         self.__block_size = context.block_size
-        self.__initialized = initialized
-        
-        # Register on redis server
-        if initialized:
-            self.context.redis_master.hmset(const.INFO_FORMAT.format(name), { 'block_size': context.block_size, 'rows' : rows, 'cols' : cols })
+        self.context.redis_master.hmset(const.INFO_FORMAT.format(name), { 'block_size': context.block_size, 'rows' : rows, 'cols' : cols })
     
     def __del__(self):
-        if self.__initialized:
-            if not self.__persist:
-                try:
-                    self.delete()
-                finally:
-                    pass
+        if not self.__persist:
+            try:
+                self.__delete()
+            finally:
+                pass
                 
     def set_persistence(self, persist):
         self.__persist = persist
     
-    def delete(self):
+    def __delete(self):
         redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
         for block in self.block_names():
             redwrap.delete_block(block)
         self.context.redis_master.delete(const.INFO_FORMAT.format(self.__name))
-        self.__initialized = False
     
     #
     # Static methods
@@ -87,10 +83,9 @@ class Matrix:
         rows = mat.shape[0]
         cols = mat.shape[1]
 
-
         redwrap = RedisWrapper(context.redis_master, context.key_manager)
 
-        m = Matrix(rows, cols, name, context, True)
+        m = Matrix(rows, cols, name, context)
         # Separate blocks and send them to the redis server
         for j in range(0, m.row_blocks()):
             for i in range(0, m.col_blocks()):
@@ -107,9 +102,26 @@ class Matrix:
         if info:
             if info['block_size'] != context.block_size:
                 raise BaseException('Matrix has the wrong block size')
-            return Matrix(info['rows'], info['cols'], name, context, True)
+            return Matrix(info['rows'], info['cols'], name, context)
         else:
             raise BaseException('Matrix with the name ' + name + ' does not exist on database')
+     
+    @staticmethod       
+    def from_scalar(scalar, rows, cols, context, name=None):
+        if name == None:
+            name = MatrixFactory.getRandomMatrixName()
+        create_job = matrix_jobs.CreateMatrixJob(context, scalar, rows, cols, name)
+        create_job.run()
+        return Matrix(rows, cols, name, context)
+    
+    @staticmethod    
+    def random(rows, cols, context, name=None):
+        if name == None:
+            name = MatrixFactory.getRandomMatrixName()
+        create_job = matrix_jobs.CreateMatrixJob(context, 'rand', rows, cols, name)
+        create_job.run()
+        return Matrix(rows, cols, name, context)
+    
     #
     # Getters for matrix properties
     #
@@ -261,7 +273,7 @@ class Matrix:
         ms_job = matrix_jobs.MatrixScalarJob(self.context, self, scalar, op, result_name)
         ms_job.run()
         
-        res = Matrix(self.__rows, self.__cols, result_name, self.context, True)
+        res = Matrix(self.__rows, self.__cols, result_name, self.context)
         return res
     
     def dot(self, m, result_name=None, transpose_self=False, transpose_m=False, negate_self=False, negate_m=False):
@@ -288,7 +300,7 @@ class Matrix:
         add_job = matrix_jobs.MultiplicationMergeJob(self.context, self.row_blocks(), m.col_blocks(), mult_name, result_name)
         add_job.run()
         
-        res = Matrix(self.__rows, m.__cols, result_name, self.context, True)
+        res = Matrix(self.__rows, m.__cols, result_name, self.context)
         return res
     
     def cw_add(self, m, result_name=None):
@@ -307,10 +319,9 @@ class Matrix:
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
         self.__check_blocksize(m)
-        
-        cw_job = matrix_jobs.CellwiseOperationJob(self.context, self, m, op, result_name)
+        cw_job = matrix_jobs.BinaryExpressionJob(self.context, self, m, 'x{0}y'.format(op), result_name)
         cw_job.run()
-        res = Matrix(self.__rows, self.__cols, result_name, self.context, True)
+        res = Matrix(self.__rows, self.__cols, result_name, self.context)
         return res
         
     def transpose(self, result_name=None):
@@ -321,7 +332,7 @@ class Matrix:
             result_name = MatrixFactory.getRandomMatrixName()
         trans_job = matrix_jobs.TransposeJob(self.context, self, result_name)
         trans_job.run()
-        res = Matrix(self.__cols, self.__rows, result_name, self.context, True)
+        res = Matrix(self.__cols, self.__rows, result_name, self.context)
         return res
     
     def __aggr(self, aggr_op, expr, axis):
@@ -333,7 +344,7 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
-                aggr_cmd = command_builder.build_command('MAGGR', self.block_name(row, col), expr, axis, aggr_op, mname)
+                aggr_cmd = cmd.build_command('MAGGR', self.block_name(row, col), cmd.escape_expression(expr), axis, aggr_op, mname)
                 aggr_job.add_subjob(aggr_cmd)
         try:
             aggr_job.execute()
@@ -353,6 +364,7 @@ class Matrix:
             for row in range(0,self.row_blocks()):
                 key = self.context.key_manager.get_block_name(prefix, col, row)
                 val = float(redwrap.get_value(key))
+                redwrap.delete_block(key)
                 if result == None or (val > result and aggr == 'max') or (val < result and aggr == 'min'):
                     result = val
                 
@@ -380,7 +392,9 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 key = self.context.key_manager.get_block_name(prefix, col, row)
-                total += float(redwrap.get_value(key))
+                val = redwrap.get_value(key)
+                total += float(val)
+                redwrap.delete_block(key)
         return total
 
     def col_sums(self, result_name=None, expr='x'):
@@ -395,8 +409,8 @@ class Matrix:
                 
         # Now sum up the vectors for each row
         for col in range(0, self.col_blocks()):
-            add_cb = command_builder.CommandBuilder('MADD')
-            del_cb = command_builder.CommandBuilder('DEL')
+            add_cb = cmd.CommandBuilder('MADD')
+            del_cb = cmd.CommandBuilder('DEL')
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
                 add_cb.add_param(mname)
@@ -408,7 +422,7 @@ class Matrix:
         except exceptions.JobException as e:    
             raise exceptions.MatrixOperationException(str(e), 'MADD')
         
-        res = Matrix(1, self.__cols, result_name, self.context, True)
+        res = Matrix(1, self.__cols, result_name, self.context)
         return res
         
     def col_avg(self, result_name=None, expr='x'):
@@ -426,8 +440,8 @@ class Matrix:
                 
         # Now sum up the vectors for each column
         for row in range(0, self.row_blocks()):
-            add_cb = command_builder.CommandBuilder('MADD')
-            del_cb = command_builder.CommandBuilder('DEL')
+            add_cb = cmd.CommandBuilder('MADD')
+            del_cb = cmd.CommandBuilder('DEL')
             for col in range(0,self.col_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
                 add_cb.add_param(mname)
@@ -439,7 +453,7 @@ class Matrix:
         except exceptions.JobException as e:
             raise exceptions.MatrixOperationException(str(e), 'MADD')
         
-        res = Matrix(self.__rows, 1, result_name, self.context, True)
+        res = Matrix(self.__rows, 1, result_name, self.context)
         return res
     
     def trace(self):
@@ -490,7 +504,7 @@ class Matrix:
             self.context.redis_master.delete(part_name)
             redwrap.create_block(self.context.key_manager.get_block_name(result_name, p, 0), numpy.sqrt(sum))
         
-        res = Matrix(self.__rows, centers.dimension()[0], result_name, self.context, True)
+        res = Matrix(self.__rows, centers.dimension()[0], result_name, self.context)
         return res
     
     def k_means_recalc(self, dist, result_name=None):
@@ -532,7 +546,7 @@ class Matrix:
                     conc = numpy.concatenate((conc, sum / num_records), axis=0)
 
             redwrap.create_block(self.context.key_manager.get_block_name(result_name, 0, col), conc)
-        res = Matrix(num_centers, self.__cols, result_name, self.context, True)
+        res = Matrix(num_centers, self.__cols, result_name, self.context)
         return res
     
     def equals(self, m):
@@ -599,7 +613,7 @@ class Matrix:
         return self.scalar_divide(self.max(), result_name=result_name)
         
     def vector_norm(self, ord):
-        expr = 'numpy.power(x,' + str(ord) + ')'
+        expr = 'numpy.power(x, ' + str(ord) + ')'
         sum = self.sum(expr=expr)
         return sum**(1.0/ord)
         
@@ -628,7 +642,7 @@ class Matrix:
                 result += modifiers[i]
         if len(result) == 0:
             result = "n"
-        return result    
+        return result
     
     def __str__(self):
         return str(self.get_numpy_matrix())

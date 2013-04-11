@@ -39,7 +39,53 @@ class MatrixScalarJob(jobs.Job):
                                                             self.context.key_manager.get_block_name(self.result_name, row, col))
                 self.add_subjob(mult_cmd)
         self.execute()
+
+class CreateMatrixJob(jobs.Job):
+    
+    def __init__(self, context, content, rows, cols, result_name):
+        super(CreateMatrixJob, self).__init__(context)
+        self.content = content
+        self.rows = rows
+        self.cols = cols
+        self.result_name = result_name
         
+    def run(self):
+        numcols = self.cols / self.context.block_size
+        if self.cols % self.context.block_size != 0:
+            numcols += 1
+        numrows = self.rows / self.context.block_size
+        if self.rows % self.context.block_size != 0:
+            numrows += 1
+            
+        for col in range(0, numcols):
+            for row in range(0, numrows):
+                cols = self.context.block_size
+                rows = self.context.block_size
+                # In case the matrix size is not a multiple of the block size
+                if (row+1) * self.context.block_size > self.rows:
+                    rows = self.rows % self.context.block_size
+                if (col+1) * self.context.block_size > self.cols:
+                    cols = self.cols % self.context.block_size
+                comm = cmd.build_command(cmd.CREATE, self.content, rows, cols, self.context.key_manager.get_block_name(self.result_name, row, col))
+                self.add_subjob(comm)
+        self.execute()
+
+
+class BinaryExpressionJob(BinaryMatrixJob):
+
+    def __init__(self, context, matrix1, matrix2, expr, result_name):
+        super(BinaryExpressionJob, self).__init__(context, matrix1, matrix2)
+        self.expr = expr
+        self.result_name = result_name
+        
+    def run(self):
+         for col in range(0, self.matrix1.col_blocks()):
+            for row in range(0,self.matrix1.row_blocks()):
+                comm = cmd.build_command('MBIN', self.matrix1.block_name(row, col), self.matrix2.block_name(row, col), self.expr, 
+                                            self.context.key_manager.get_block_name(self.result_name, row, col))
+                self.add_subjob(comm)
+         self.execute()
+     
 class TraceJob(UnaryMatrixJob):
 
     def __init__(self, context, matrix, output_key):
