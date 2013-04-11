@@ -37,35 +37,35 @@ class MatrixTestCase(unittest.TestCase):
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1 * 5
         res = 5 * m
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on scalar multiplication')
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
 
     def testTranspose(self):
         m = numpy.random.rand(1024,1024)
         mat1 = self.server.matrix_from_numpy(m)
         res = mat1.transpose()
         
-        numpy.testing.assert_array_almost_equal(res.get_numpy_matrix(), m.T, err_msg='Numpy and RedisML produce different results on transpose')
+        numpy.testing.assert_array_almost_equal(res.get_numpy_matrix(), m.T)
 
     def testColSums(self):
         m = numpy.arange(12).reshape(3,4)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums()
         res = numpy.matrix([m.sum(axis=0)])
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
     
     def testSpecialColSums(self):
         m = numpy.arange(9).reshape(3,3)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.col_sums(expr='x+1')
         res = numpy.matrix([m.sum(axis=0)]) + 3
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
     
     def testRowSums(self):
         m = numpy.arange(12).reshape(3,4)
         mat1 = self.server.matrix_from_numpy(m)
         result = mat1.row_sums()
         res = numpy.matrix([m.sum(axis=1)])
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix(), err_msg='Numpy and RedisML produce different results on colsums')
+        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
 
     def testCellAccess(self):
         m = numpy.random.rand(1024,1024)
@@ -91,8 +91,7 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.dot(mat2, transpose_self=True, negate_m=True)
         result2 = m.transpose().dot(-n)
         
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2,
-                                                    err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
 
         
     def testNegateTransposeMultiply(self):
@@ -104,8 +103,7 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.dot(mat2, transpose_m=True, negate_self=True)
         result2 = (-m).dot(n.transpose())
         
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2,
-                                                    err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
         
     def testFullModifierMultiply(self):
         m = numpy.random.rand(1024,1024)
@@ -116,8 +114,7 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.dot(mat2, transpose_m=True, negate_self=True, transpose_self=True, negate_m=True)
         result2 = (-m).transpose().dot((-n).transpose())
         
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2,
-                                                    err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
     
     def testSimpleMultiply(self):
         m = numpy.matrix([[1,2,3],[4,5,6],[7,8,9]])
@@ -128,8 +125,7 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.dot(mat2)
         result2 = m.dot(n)
         
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2,
-                                                    err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
 
     def testMultiply(self):
         m = numpy.random.rand(1024,1024)
@@ -140,7 +136,7 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.dot(mat2)
         result2 = m.dot(n)
         
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
     
     def testSum(self):
         m = numpy.random.rand(1024,1024)
@@ -154,8 +150,7 @@ class MatrixTestCase(unittest.TestCase):
         mat2 = self.server.matrix_from_numpy(n)       
         res = m * n
         result = mat1 * mat2      
-        numpy.testing.assert_array_almost_equal(result.get_numpy_matrix(), res,
-                                                    err_msg='Numpy and RedisML produce different results')
+        numpy.testing.assert_array_almost_equal(result.get_numpy_matrix(), res)
     
     def testCellwiseAdd(self):
         m = numpy.random.rand(1024,1024)
@@ -164,12 +159,17 @@ class MatrixTestCase(unittest.TestCase):
         mat2 = self.server.matrix_from_numpy(n)
         result1 = mat1.cw_add(mat2)
         result2 = m + n
-        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results on addition')
+        numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
 
     def testVectorNorm(self):
         m = numpy.random.rand(1024,1)
         mat1 = self.server.matrix_from_numpy(m)
         self.assertAlmostEqual(la.norm(m, 2), mat1.vector_norm(2))
+        
+    def testMatrixCreation(self):
+        m = numpy.ones((900, 900))
+        mat1 = self.server.matrix_from_scalar(1, 900, 900)
+        numpy.testing.assert_array_almost_equal(mat1.get_numpy_matrix(), m)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
