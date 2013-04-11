@@ -344,12 +344,12 @@ class Matrix:
         for col in range(0, self.col_blocks()):
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
-                aggr_cmd = cmd.build_command('MAGGR', self.block_name(row, col), cmd.escape_expression(expr), axis, aggr_op, mname)
+                aggr_cmd = cmd.build_command(AGGREGATEOP, self.block_name(row, col), cmd.escape_expression(expr), axis, aggr_op, mname)
                 aggr_job.add_subjob(aggr_cmd)
         try:
             aggr_job.execute()
         except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'MAGGR')
+            raise exceptions.MatrixOperationException(str(e), AGGREGATEOP)
         
         return prefix
 
@@ -409,8 +409,8 @@ class Matrix:
                 
         # Now sum up the vectors for each row
         for col in range(0, self.col_blocks()):
-            add_cb = cmd.CommandBuilder('MADD')
-            del_cb = cmd.CommandBuilder('DEL')
+            add_cb = cmd.CommandBuilder(cmd.MATRIXADDITION)
+            del_cb = cmd.CommandBuilder(cmd.DELETE)
             for row in range(0,self.row_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
                 add_cb.add_param(mname)
@@ -420,7 +420,7 @@ class Matrix:
         try:
             add_job.execute()
         except exceptions.JobException as e:    
-            raise exceptions.MatrixOperationException(str(e), 'MADD')
+            raise exceptions.MatrixOperationException(str(e), cmd.MATRIXADDITION)
         
         res = Matrix(1, self.__cols, result_name, self.context)
         return res
@@ -440,8 +440,8 @@ class Matrix:
                 
         # Now sum up the vectors for each column
         for row in range(0, self.row_blocks()):
-            add_cb = cmd.CommandBuilder('MADD')
-            del_cb = cmd.CommandBuilder('DEL')
+            add_cb = cmd.CommandBuilder(cmd.MATRIXADDITION)
+            del_cb = cmd.CommandBuilder(cmd.DELETE)
             for col in range(0,self.col_blocks()):
                 mname = self.context.key_manager.get_block_name(prefix, col, row)
                 add_cb.add_param(mname)
@@ -451,7 +451,7 @@ class Matrix:
         try:
             add_job.execute()
         except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), 'MADD')
+            raise exceptions.MatrixOperationException(str(e), cmd.MATRIXADDITION)
         
         res = Matrix(self.__rows, 1, result_name, self.context)
         return res
