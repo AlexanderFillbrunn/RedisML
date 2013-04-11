@@ -2,6 +2,9 @@ import unittest
 import redis
 import numpy
 import numpy.testing
+import logging
+import sys
+from numpy import linalg as la
 import redisml.server.matrix as matrix
 import redisml.server.server as server
 import redisml.server.configuration as config
@@ -9,6 +12,13 @@ import redisml.server.configuration as config
 class MatrixTestCase(unittest.TestCase):
     
     def setUp(self):
+        # initialize the logger
+        job_logger = logging.getLogger('jobs')
+        job_logger.setLevel(logging.WARNING)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setFormatter(formatter)
+        job_logger.addHandler(ch)
         cfg = config.load_config('config.cfg')
         self.server = server.Server(cfg)
 
@@ -155,6 +165,11 @@ class MatrixTestCase(unittest.TestCase):
         result1 = mat1.cw_add(mat2)
         result2 = m + n
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2, err_msg='Numpy and RedisML produce different results on addition')
+
+    def testVectorNorm(self):
+        m = numpy.random.rand(1024,1)
+        mat1 = self.server.matrix_from_numpy(m)
+        self.assertAlmostEqual(la.norm(m, 2), mat1.vector_norm(2))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
