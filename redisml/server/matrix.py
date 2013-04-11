@@ -45,29 +45,16 @@ class Matrix:
         self.context = context
         self.__block_size = context.block_size
         self.context.redis_master.hmset(const.INFO_FORMAT.format(name), { 'block_size': context.block_size, 'rows' : rows, 'cols' : cols })
-    
-    def __del__(self):
-        if not self.__persist:
-            try:
-                self.__delete()
-            finally:
-                pass
-                
+              
     def set_persistence(self, persist):
+        """
+            Sets whether this matrix should be deleted on the redis server once the object is deleted
+        """
         self.__persist = persist
-    
-    def __delete(self):
-        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
-        for block in self.block_names():
-            redwrap.delete_block(block)
-        self.context.redis_master.delete(const.INFO_FORMAT.format(self.__name))
-    
+
     #
     # Static methods
     #
-    @staticmethod
-    def from_file(filename, block_size, name=None):
-        pass
     
     @staticmethod
     def from_numpy(mat, context, name=None):
@@ -749,6 +736,20 @@ class Matrix:
         if len(result) == 0:
             result = "n"
         return result
+        
+    def __delete(self):
+        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+        for block in self.block_names():
+            redwrap.delete_block(block)
+        self.context.redis_master.delete(const.INFO_FORMAT.format(self.__name))
+    
+    def __del__(self):
+        if not self.__persist:
+            try:
+                self.__delete()
+            finally:
+                pass
+
     
     def __str__(self):
         return str(self.get_numpy_matrix())
