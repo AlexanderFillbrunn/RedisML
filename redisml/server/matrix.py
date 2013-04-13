@@ -400,7 +400,7 @@ class Matrix:
         res = Matrix(self.__cols, self.__rows, result_name, self.context)
         return res
     
-    def __aggr(self, aggr_op, expr, axis):
+    def __inner_aggr(self, aggr_op, expr, axis):
         """
             Helper method for different aggregation functions
         """
@@ -420,118 +420,61 @@ class Matrix:
         
         return prefix
 
-    def __minmax(self, aggr, expr):
-        """
-            Helper class for min and max functions
-        """
-        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
-        result = None
-        prefix = self.__aggr(aggr, expr, None)
-        for col in range(0, self.col_blocks()):
-            for row in range(0,self.row_blocks()):
-                key = self.context.key_manager.get_block_name(prefix, col, row)
-                val = float(redwrap.get_value(key))
-                redwrap.delete_block(key)
-                if result == None or (val > result and aggr == 'max') or (val < result and aggr == 'min'):
-                    result = val
-                
-        return result
-
-    def max(self, expr='x'):
-        """
-            Finds the maximum element in a matrix
-        """
-        return __minmax('max', expr)
-    
-    def min(self, expr='x'):
-        """
-           Finds the minimum element in a matrix 
-        """
-        return __minmax('min', expr)
-
-    def sum(self, expr='x'):
-        """
-            Calculates sum of all matrix elements
-        """
-        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
-        total = 0
-        prefix = self.__aggr('sum', expr, None)
-        for col in range(0, self.col_blocks()):
-            for row in range(0,self.row_blocks()):
-                key = self.context.key_manager.get_block_name(prefix, col, row)
-                val = redwrap.get_value(key)
-                total += float(val)
-                redwrap.delete_block(key)
-        return total
-
-    def col_sums(self, result_name=None, expr='x'):
-        """
-            Sums up each col and returns a vector of all sums
-        """
+    def __aggr(self, inner_aggr, outer_aggr, axis=None, expr='x', result_name=None):
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
             
-        prefix = self.__aggr('sum', expr, 0)
-        add_job = jobs.Job(self.context)
-                
-        # Now sum up the vectors for each row
-        for col in range(0, self.col_blocks()):
-            add_cb = cmd.CommandBuilder(cmd.MATRIXADDITION)
-            del_cb = cmd.CommandBuilder(cmd.DELETE)
-            for row in range(0,self.row_blocks()):
-                mname = self.context.key_manager.get_block_name(prefix, col, row)
-                add_cb.add_param(mname)
-                del_cb.add_param(mname)
-            add_cb.add_param(self.context.key_manager.get_block_name(result_name, 0, col))
-            add_job.add_subjob(add_cb.join(del_cb))
-        try:
-            add_job.execute()
-        except exceptions.JobException as e:    
-            raise exceptions.MatrixOperationException(str(e), cmd.MATRIXADDITION)
+        prefix = self.__inner_aggr(inner_aggr, expr, axis)
+        aggr_job = jobs.Job(self.context)
         
-        res = Matrix(1, self.__cols, result_name, self.context)
-        return res
-        
-    def col_avg(self, result_name=None, expr='x'):
-        """
-            Calculates the average value for each column
-        """
-        m = self.col_sums(expr=expr)
-        return m.scalar_divide(self.__rows, result_name=result_name)
-        
-    def row_sums(self, result_name=None, expr='x'):
-        """
-            Sums up each row and returns a vector of all sums
-        """
-        if result_name == None:
-            result_name = MatrixFactory.getRandomMatrixName()
-        prefix = self.__aggr('sum', expr, 1)
-        add_job = jobs.Job(self.context)
-                
-        # Now sum up the vectors for each column
-        for row in range(0, self.row_blocks()):
-            add_cb = cmd.CommandBuilder(cmd.MATRIXADDITION)
-            del_cb = cmd.CommandBuilder(cmd.DELETE)
-            for col in range(0,self.col_blocks()):
-                mname = self.context.key_manager.get_block_name(prefix, col, row)
-                add_cb.add_param(mname)
-                del_cb.add_param(mname)
-            add_cb.add_param(self.context.key_manager.get_block_name(result_name, row, 0))
-            add_job.add_subjob(add_cb.join(del_cb))
-        try:
-            add_job.execute()
-        except exceptions.JobException as e:
-            raise exceptions.MatrixOperationException(str(e), cmd.MATRIXADDITION)
-        
-        res = Matrix(self.__rows, 1, result_name, self.context)
-        return res
-        
-    def row_avg(self, result_name=None, expr='x'):
-        """
-            Calculates the average value for each row
-        """
-        m = self.row_sums(expr=expr)
-        return m.scalar_divide(self.__cols, result_name=result_name)
+        if axis == 0:
+            for col in range(0, self.col_blocks()):
+                bin_cb = cmd.CommandBuilder(cmd.BINARYMATRIXOP)
+                del_cb = cmd.CommandBuilder(cmd.DELETE)
+                for row in range(0, self.row_blocks()):
+                    mname = self.context.key_manager.get_block_name(prefix, col, row)
+                    bin_cb.add_param(mname)
+                    del_cb.add_param(mname)
+                bin_cb.add_param(outer_aggr)
+                bin_cb.add_param(self.context.key_manager.get_block_name(result_name, 0, col))
+                aggr_job.add_subjob(bin_cb.join(del_cb))
+            aggr_job.execute()
+            return Matrix(1, self.__cols, result_name, self.context)
+        elif axis == 1:
+            for row in range(0, self.row_blocks()):
+                bin_cb = cmd.CommandBuilder(cmd.BINARYMATRIXOP)
+                del_cb = cmd.CommandBuilder(cmd.DELETE)
+                for col in range(0,self.col_blocks()):
+                    mname = self.context.key_manager.get_block_name(prefix, col, row)
+                    bin_cb.add_param(mname)
+                    del_cb.add_param(mname)
+                bin_cb.add_param(outer_aggr)
+                bin_cb.add_param(self.context.key_manager.get_block_name(result_name, row, 0))
+                aggr_job.add_subjob(bin_cb.join(del_cb))
+            aggr_job.execute()
+            return Matrix(self.__rows, 1, result_name, self.context)
+        elif axis == None:
+            total = None
+            redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+            for col in range(0, self.col_blocks()):
+                for row in range(0,self.row_blocks()):
+                    key = self.context.key_manager.get_block_name(prefix, col, row)
+                    val = float(redwrap.get_value(key))
+                    if total == None:
+                        total = val
+                    else:
+                        total = eval(outer_aggr, { 'numpy' : numpy, 'x' : total, 'y' : val })
+                    redwrap.delete_block(key)
+            return total
+    
+    def sum(self, expr='x', axis=None):
+        return self.__aggr('sum', 'x+y', axis=axis, expr=expr)
+    
+    def min(self, expr='x', axis=None):
+        return self.__aggr('min', 'numpy.minimum(x,y)', axis=axis, expr=expr)
+    
+    def max(self, expr='x', axis=None):
+        return self.__aggr('max', 'numpy.maximum(x,y)', axis=axis, expr=expr)
     
     def trace(self):
         """

@@ -69,10 +69,10 @@ def madd(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     
     if len(cmd_ctx.cmdArgs) > 2:
-        for i in cmd_ctx.cmdArgs[1:len(cmd_ctx.cmdArgs)-1]:
+        for i in cmd_ctx.cmdArgs[1:-1]:
             m += _get_matrix_block(cmd_ctx, i)
 
-    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[len(cmd_ctx.cmdArgs)-1], m)
+    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[-1], m)
     
 def ms(cmd_ctx):
     scalar = float(cmd_ctx.cmdArgs[0])
@@ -98,7 +98,9 @@ def maggr(cmd_ctx):
         slave = _get_redis_slave(cmd_ctx, const.get_slave_name(cmd_ctx.cmdArgs[4]))
         slave.set(cmd_ctx.cmdArgs[4], tmp)
     else:
-        res = numpy.matrix(tmp)
+        res = numpy.matrix([tmp])
+        if axis == '1':
+            res = res.T
         _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[4], res)
 
 def mtrace(cmd_ctx):
@@ -132,14 +134,14 @@ def equal(cmd_ctx):
         cmd_ctx.redis_master.rpush(key, 1)
     
 def mbin(cmd_ctx):
-    m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
-    if cmd_ctx.cmdArgs[1] == cmd_ctx.cmdArgs[0]:
-        n = m
-    else:
-        n = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
-    expr = cmd.unescape_expression(cmd_ctx.cmdArgs[2])
-    res = eval(expr, { 'numpy' : numpy, 'x' : m, 'y' : n })     
-    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[3], res)
+    res = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
+    expr = cmd.unescape_expression(cmd_ctx.cmdArgs[-2])
+    
+    for i in range(1, len(cmd_ctx.cmdArgs)-2):
+        n = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[i])
+        res = eval(expr, { 'numpy' : numpy, 'x' : res, 'y' : n })
+    
+    _save_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[-1], res)
 
 def count(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
@@ -171,7 +173,7 @@ def mcreate(cmd_ctx):
 def k_means_distance(cmd_ctx):
     m = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[0])
     v = _get_matrix_block(cmd_ctx, cmd_ctx.cmdArgs[1])
-    key = cmd_ctx.cmdArgs[len(cmd_ctx.cmdArgs)-1]
+    key = cmd_ctx.cmdArgs[-1]
     num_v = len(v)
     num_r = len(m)
     result = numpy.empty((num_r,num_v))

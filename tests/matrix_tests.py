@@ -46,27 +46,6 @@ class MatrixTestCase(unittest.TestCase):
         
         numpy.testing.assert_array_almost_equal(res.get_numpy_matrix(), m.T)
 
-    def testColSums(self):
-        m = numpy.arange(12).reshape(3,4)
-        mat1 = self.server.matrix_from_numpy(m)
-        result = mat1.col_sums()
-        res = numpy.matrix([m.sum(axis=0)])
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
-    
-    def testSpecialColSums(self):
-        m = numpy.arange(9).reshape(3,3)
-        mat1 = self.server.matrix_from_numpy(m)
-        result = mat1.col_sums(expr='x+1')
-        res = numpy.matrix([m.sum(axis=0)]) + 3
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
-    
-    def testRowSums(self):
-        m = numpy.arange(12).reshape(3,4)
-        mat1 = self.server.matrix_from_numpy(m)
-        result = mat1.row_sums()
-        res = numpy.matrix([m.sum(axis=1)])
-        numpy.testing.assert_array_almost_equal(res, result.get_numpy_matrix())
-
     def testCellAccess(self):
         m = numpy.random.rand(1024,1024)
         mat1 = self.server.matrix_from_numpy(m)
@@ -92,7 +71,6 @@ class MatrixTestCase(unittest.TestCase):
         result2 = m.transpose().dot(-n)
         
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
-
         
     def testNegateTransposeMultiply(self):
         m = numpy.random.rand(1024,1024)
@@ -132,10 +110,8 @@ class MatrixTestCase(unittest.TestCase):
         mat1 = self.server.matrix_from_numpy(m)
         n = numpy.random.rand(1024,1024)
         mat2 = self.server.matrix_from_numpy(n)
-        
         result1 = mat1.dot(mat2)
         result2 = m.dot(n)
-        
         numpy.testing.assert_array_almost_equal(result1.get_numpy_matrix(), result2)
     
     def testSum(self):
@@ -170,6 +146,48 @@ class MatrixTestCase(unittest.TestCase):
         m = numpy.ones((900, 900))
         mat1 = self.server.matrix_from_scalar(1, 900, 900)
         numpy.testing.assert_array_almost_equal(mat1.get_numpy_matrix(), m)
+        
+    def testAggregationRowSum(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.sum(axis=1)
+        r2 = numpy.matrix(m.sum(axis=1)).T
+        numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
+        
+    def testAggregationRowMax(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.max(axis=1)
+        r2 = numpy.matrix(m.max(axis=1)).T
+        numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
+        
+    def testAggregationColSum(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.sum(axis=0)
+        r2 = numpy.matrix(m.sum(axis=0))
+        numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
+        
+    def testAggregationMin(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.min()
+        r2 = m.min()
+        self.assertAlmostEqual(r1, r2)
+        
+    def testAggregationColMin(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.min(axis=0)
+        r2 = numpy.matrix(m.min(axis=0))
+        numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
+        
+    def testAggregationSpecialColSum(self):
+        m = numpy.random.rand(1024,1024)
+        mat1 = self.server.matrix_from_numpy(m)
+        r1 = mat1.sum(axis=0, expr='numpy.power(x,2)')
+        r2 = numpy.matrix(numpy.power(m,2).sum(axis=0))
+        numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
