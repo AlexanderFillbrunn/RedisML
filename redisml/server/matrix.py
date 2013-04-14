@@ -40,6 +40,7 @@ class Matrix:
     def __init__(self, rows, cols, name, context):
         self.__rows = rows
         self.__cols = cols
+        self.shape = (self.__rows, self.__cols)
         self.__name = name
         self.__persist = False
         self.context = context
@@ -130,12 +131,6 @@ class Matrix:
             Returns this matrix' block size
         """
         return self.__block_size
-
-    def dimension(self):
-        """
-            Returns a set containing the number of rows and columns of this matrix
-        """
-        return (self.__rows, self.__cols)
     
     def can_multiply_with(self, m):
         """
@@ -332,7 +327,7 @@ class Matrix:
         """
         self.__check_blocksize(m)
         if not self.can_multiply_with(m):
-            raise Exception('Dimensions do not match for multiplication: ' + str(self.dimension()) + ' - ' + str(m.dimension()))
+            raise Exception('Dimensions do not match for multiplication: ' + str(self.shape) + ' - ' + str(m.shape))
         
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
@@ -499,7 +494,7 @@ class Matrix:
         """
             Computes the distance between each row and each of the given center vectors for k-means
         """
-        if centers.dimension()[1] != self.__cols:
+        if centers.shape[1] != self.__cols:
             raise BaseException('Dimensions of matrix and centers do not match')
         if result_name == None:
             result_name = MatrixFactory.getRandomMatrixName()
@@ -524,7 +519,7 @@ class Matrix:
             self.context.redis_master.delete(part_name)
             redwrap.create_block(self.context.key_manager.get_block_name(result_name, p, 0), numpy.sqrt(sum))
         
-        res = Matrix(self.__rows, centers.dimension()[0], result_name, self.context)
+        res = Matrix(self.__rows, centers.shape[0], result_name, self.context)
         return res
     
     def k_means_recalc(self, dist, result_name=None):
@@ -535,7 +530,7 @@ class Matrix:
             result_name = MatrixFactory.getRandomMatrixName()
         
         redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
-        num_centers = dist.dimension()[1]
+        num_centers = dist.shape[1]
         prefix = 'center(' + self.__name + ',' + dist.name() + ')'
         cnt_prefix = 'counter(' + self.__name + ',' + dist.name() + ')_'
         
@@ -573,7 +568,7 @@ class Matrix:
         """
             Checks if two matrices contain the same values
         """
-        if self.dimension() != m.dimension():
+        if self.shape != m.shape:
             return False
 
         result_key = 'equal(' + self.name() + ',' + m.name() + ')'
@@ -651,7 +646,7 @@ class Matrix:
             Returns a scalar if the matrix consists of only one cell
         """
         redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
-        if self.dimension()[0] != 1 or self.dimension()[1] != 1:
+        if self.shape[0] != 1 or self.shape[1] != 1:
             raise exceptions.MatrixOperationException('Cannot convert a matrix with more than one column and row to a scalar', 'MATRIX2SCALAR')
         return redwrap.get_block(self.block_name(0,0))[0,0]
     
