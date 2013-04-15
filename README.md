@@ -8,15 +8,17 @@ cell-wise operations, matrix-scalar operations, row and column sums, etc.
 
 General explanation
 -----------------------
-A matrix is split into blocks and then stored in the redis server. All operations on matrices that can be parallelized are called "jobs".
-These jobs have subjobs that are pushed to the workers and instructs them to execute a certain operation on one or more blocks.
-A matrix is split into blocks and then stored on several redis instances called "slaves". There is also a master redis instance which is used for storing management information. The master can at the same time be a slave, which means it also stores matrix blocks.
-All operations on matrices that can be parallelized are called "jobs". These jobs have subjobs that are pushed to the workers and each subjob works on a number of matrix blocks.
+Matrices in RedisML are not stored in one piece. Instead, it is divided into blocks of a certain size and each block is stored under a unique key on a redis database.
+A matrix does not even need to be stored on a single redis instance. RedisML can be configured to have one master redis instance that handles the communication and bookkeeping and several slave instances that only store matrix blocks.
+When an operation is performed on a matrix it can often be divided into multiple operations on different blocks. When there are multiple workers connected, each can process a part of an operation by performing it only on certain blocks.
+An operation that can be parallelized in RedisML is a job. Such a job has subjobs that are pushed to the workers and instructs them to execute a certain operation on one or more blocks.
 
 Workers that want to participate in the calculations listen to new subjobs being pushed into a list in the key "free_jobs" on the master redis instance.
 Once a new subjob is added, the first worker to retrieve it gets the complete job information from a key that can be computed from the job id in the list.
 The subjob command contains information about which blocks to use, under which key to store the result and which operation to perform.
 After the worker has sucessfully executed the command it uses redis' publish/subscribe functionality to inform the server.
+
+This concept allows parallelization of expensive matrix operations and additionally distributing of large matrices to several redis instances.
 
 First steps
 -----------------------
