@@ -18,7 +18,7 @@ Once a new subjob is added, the first worker to retrieve it gets the complete jo
 The subjob command contains information about which blocks to use, under which key to store the result and which operation to perform.
 After the worker has sucessfully executed the command it uses redis' publish/subscribe functionality to inform the server.
 
-This concept allows parallelization of expensive matrix operations and additionally distributing of large matrices to several redis instances.
+This concept allows parallelization of expensive matrix operations and additionally distribution of large matrices to several redis instances.
 
 First steps
 -----------------------
