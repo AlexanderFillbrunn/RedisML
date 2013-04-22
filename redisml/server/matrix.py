@@ -278,6 +278,80 @@ class Matrix:
     #
     # Matrix operations
     #
+    def slice(self, row, num_rows, col, num_cols, result_name=None):
+        
+        if result_name == None:
+            result_name = MatrixFactory.getRandomMatrixName()
+        # Check if given values are valid
+        if row + num_rows > self.__rows or (num_rows < 0 and row + num_rows < 0):
+            raise Exception('Row index out of bounds')
+        if col + num_cols > self.__cols or (num_cols < 0 and col + num_cols < 0):
+            raise Exception('Column index out of bounds')
+        # Handle negative indices
+        if row < 0:
+            row = self.__rows + row
+        if num_rows < 0:
+            row = row + num_rows
+            num_rows = -num_rows
+            
+        if col < 0:
+            col = self.__cols + col
+        if num_cols < 0:
+            col = col + num_cols
+            num_cols = -num_cols
+        
+        redwrap = RedisWrapper(self.context.redis_master, self.context.key_manager)
+        row_blocks = num_rows / self.__block_size
+        if num_rows % self.__block_size != 0:
+            row_blocks += 1
+        col_blocks = num_cols / self.__block_size
+        if num_cols % self.__block_size != 0:
+            col_blocks += 1                       
+        # Iterate the blocks of the new slice
+        for r in range(0, row_blocks):
+            for c in range(0, col_blocks):
+                start_row = row + r * self.__block_size
+                end_row = min(row + num_rows, start_row + self.__block_size)
+                start_col = col + c * self.__block_size
+                end_col = min(col + num_cols, start_col + self.__block_size)
+
+                # Iterate the blocks of the current matrix that intersect with the current block of the new slice
+                # and patch them together
+                a = None
+                for i in range(start_row / self.__block_size, (end_row-1) / self.__block_size + 1):
+                    row_b = None
+                    for j in range(start_col / self.__block_size, (end_col-1) / self.__block_size + 1):
+                        n = redwrap.get_block(self.block_name(i, j))
+                        if row_b == None:
+                            row_b = n
+                        else:
+                            row_b = numpy.concatenate((row_b, n), axis=1)
+                    if a == None:
+                        a = row_b
+                    else:
+                        a = numpy.concatenate((a, row_b), axis=0)
+
+                # Now we have a matrix so big that the whole current block of the new slice as defined by r and c fits in it
+                # Use numpy slicing to get the block from this matrix
+                mr = min(row + self.__block_size, a.shape[0])
+                mc = min(col + self.__block_size, a.shape[1])
+                sc = col % self.__block_size
+                sr = row % self.__block_size
+                if r == row_blocks-1 and (row + num_rows) % self.__block_size != 0:
+                    mr = min(mr, num_rows % self.__block_size)   
+                if c == col_blocks-1 and (col + num_cols) % self.__block_size != 0:
+                    mc = min(mc, num_cols % self.__block_size)
+
+                if mr == row and row % self.__block_size != 0:
+                       mr += 1
+                if mc == col and col % self.__block_size != 0:
+                    mc += 1
+
+                block = a[sr:mr,sc:mc]
+                redwrap.create_block(self.context.key_manager.get_block_name(result_name, r, c), block)
+
+        return Matrix(num_rows, num_cols, result_name, self.context)
+        
     def scalar_divide(self, scalar, result_name=None):
         """
             Divides the matrix by a scalar

@@ -188,6 +188,30 @@ class MatrixTestCase(unittest.TestCase):
         r1 = mat1.sum(axis=0, expr='numpy.power(x,2)')
         r2 = numpy.matrix(numpy.power(m,2).sum(axis=0))
         numpy.testing.assert_array_almost_equal(r1.get_numpy_matrix(), r2)
-
+       
+    def testSlicing(self):
+        size = 512
+        m = numpy.random.rand(size, size)
+        mat1 = self.server.matrix_from_numpy(m)
+        
+        slice1 = m[0:size,0:size]
+        slice2 = mat1.slice(0, size, 0, size).get_numpy_matrix()
+        numpy.testing.assert_array_almost_equal(slice1, slice2)
+        
+        slice1 = m[0:size / 2,0:size / 2]
+        slice2 = mat1.slice(0, size/2, 0, size/2).get_numpy_matrix()
+        numpy.testing.assert_array_almost_equal(slice1, slice2)
+        
+        slice1 = m[size / 2:size,size / 2:size]
+        slice2 = mat1.slice(size/2, size/2, size/2, size/2).get_numpy_matrix()
+        numpy.testing.assert_array_almost_equal(slice1, slice2)
+        
+        for i in range(0, size-1, 100):
+            for j in range(0, size-1, 100):
+                slice1 = m[i:size,j:size]
+                slice2 = mat1.slice(i, size-i, j, size-j).get_numpy_matrix()
+                numpy.testing.assert_array_almost_equal(slice1, slice2)
+    
+    
 if __name__ == '__main__':
     unittest.main(verbosity=2)
