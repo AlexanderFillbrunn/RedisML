@@ -10,11 +10,11 @@ d = 0.8
 v_quadratic_error = 0.001
 
 v_ = np.random.rand(5,1)
-M_ = np.matrix([ [0,     0,      0,      0,   1],
+M_ = np.matrix([ [0,     0,      0,      0.5,   0.5],
                  [0,     0,      1,      0,   0],
                  [0,     0,      0,      0,   0],
                  [0,     1,      0,      0,   0],
-                 [1,     0,      0,      1,   0]])
+                 [1,     0,      0,      0.5,   0.5]])
 
 v = s.matrix_from_numpy(v_)
 last_v = s.matrix_from_scalar(999, 5, 1)
