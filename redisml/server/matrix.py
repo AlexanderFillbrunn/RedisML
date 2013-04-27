@@ -124,6 +124,23 @@ class Matrix:
         return Matrix(rows, cols, name, context)
     
     #
+    # Container emulation
+    #
+    def __len__(self):
+        return self.__rows * self.__cols
+    
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            indices = i.indices(3)
+            if indices[2] != 1:
+                raise Exception('Step sizes other than 1 are not allowed')
+            return self.slice(indices[0], indices[1]+1, 0, self.__cols)
+        elif isinstance(i, tuple):
+            idx1 = i[0].indices(3)
+            idx2 = i[1].indices(3)
+            return self.slice(idx1[0], idx1[1] - idx1[0], idx2[0], idx2[1] - idx2[0])
+    
+    #
     # Getters for matrix properties
     #
     def block_size(self):
@@ -314,7 +331,7 @@ class Matrix:
                 end_row = min(row + num_rows, start_row + self.__block_size)
                 start_col = col + c * self.__block_size
                 end_col = min(col + num_cols, start_col + self.__block_size)
-
+                
                 # Iterate the blocks of the current matrix that intersect with the current block of the new slice
                 # and patch them together
                 a = None
@@ -338,15 +355,14 @@ class Matrix:
                 sc = col % self.__block_size
                 sr = row % self.__block_size
                 if r == row_blocks-1 and (row + num_rows) % self.__block_size != 0:
-                    mr = min(mr, num_rows % self.__block_size)   
+                    mr = min(mr, (row + num_rows) % self.__block_size)   
                 if c == col_blocks-1 and (col + num_cols) % self.__block_size != 0:
-                    mc = min(mc, num_cols % self.__block_size)
-
+                    mc = min(mc, (col + num_cols) % self.__block_size)
                 if mr == row and row % self.__block_size != 0:
-                       mr += 1
+                    mr += 1
                 if mc == col and col % self.__block_size != 0:
                     mc += 1
-
+                
                 block = a[sr:mr,sc:mc]
                 redwrap.create_block(self.context.key_manager.get_block_name(result_name, r, c), block)
 
