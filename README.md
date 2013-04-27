@@ -20,6 +20,44 @@ After the worker has sucessfully executed the command it uses redis' publish/sub
 
 This concept allows parallelization of expensive matrix operations and additionally distribution of large matrices to several redis instances.
 
+<pre>
+
+     +--------------+        +--------------+        +--------------+        +--------------+
+     |    Worker    |        |    Worker    |        |    Worker    |        |    Worker    |
+     |--------------|        |--------------|        |--------------|        |--------------|
+     | o Logic for  |        | o Logic for  |        | o Logic for  |        | o Logic for  |
+     |   subjobs    |        |   subjobs    |        |   subjobs    |        |   subjobs    |
+     |              |        |              |        |              |        |              |
+     |              |        |              |        |              |        |              |
+     +------+-------+        +-------+------+        +-------+------+        +-------+------+
+            |                        +--+                    |                       |
+            |                           |                    |                       |
+            +---------------------------o--------------------+-----------------------+
+                                        |
+            +---------------------------o-----------------------------+
+            |                           |                             |
+     +------v------+           +--------v---------+            +------v------+
+     | Redis Slave |           |   Redis Master   |            | Redis Slave |
+     |-------------|           |------------------|            |-------------|
+     | o Matrix    |           | o Housekeeping   |            | o Matrix    |
+     |   data      |           |   - Slave info   |            |   data      |
+     |             |           |   - Matrix meta  |            |             |
+     |             |           |            data  |            |             |
+     |             |           |                  |            |             |
+     +-------------+           +------------------+            +-------------+
+            ^                             ^                            ^
+            |                             |                            |
+            |                             |                            |
+            |                             |                            |
+            |                    +--------+-------+                    |
+            |                    |     Server     |                    |
+            |                    |----------------|                    |
+            |                    | o Logic        |                    |
+            +--------------------+                +--------------------+
+                                 |                |
+                                 +----------------+
+</pre>
+
 First steps
 -----------------------
 This assumes you are running the server and all workers on localhost. This is the only practical thing at the moment since I have not yet implemented a nice configuration.
