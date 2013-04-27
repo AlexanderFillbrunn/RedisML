@@ -28,7 +28,6 @@ This concept allows parallelization of expensive matrix operations and additiona
      | o Logic for  |        | o Logic for  |        | o Logic for  |        | o Logic for  |
      |   subjobs    |        |   subjobs    |        |   subjobs    |        |   subjobs    |
      |              |        |              |        |              |        |              |
-     |              |        |              |        |              |        |              |
      +------+-------+        +-------+------+        +-------+------+        +-------+------+
             |                        +--+                    |                       |
             |                           |                    |                       |
