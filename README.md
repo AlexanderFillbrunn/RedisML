@@ -9,7 +9,7 @@ cell-wise operations, matrix-scalar operations, row and column sums, etc.
 General explanation
 -----------------------
 Matrices in RedisML are not stored in one piece. Instead, it is divided into blocks of a certain size and each block is stored under a unique key on a redis database.
-A matrix does not even need to be stored on a single redis instance. RedisML can be configured to have one master redis instance that handles the communication and bookkeeping and several slave instances that only store matrix blocks.
+A matrix does not even need to be stored on a single redis instance. RedisML can be configured to have one master redis instance that handles the communication and bookkeeping and several slave instances that only store matrix blocks. This sharding method is a substitute for [redis cluster](http://redis.io/topics/cluster-spec), which is currently under development. 
 When an operation is performed on a matrix it can often be divided into multiple operations on different blocks. When there are multiple workers connected, each can process a part of an operation by performing it only on certain blocks.
 An operation that can be parallelized in RedisML is a job. Such a job has subjobs that are pushed to the workers and instructs them to execute a certain operation on one or more blocks.
 
